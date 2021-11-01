@@ -5,6 +5,7 @@ import {
   SectionBase,
   SectionListProps,
   VirtualizedList,
+  ViewToken,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
 
@@ -198,6 +199,50 @@ export default class InvertedSectionList<
     }
   };
 
+  private convertViewable = (viewable: ViewToken): ViewToken => {
+    invariant(viewable.index != null, "Received a broken ViewToken");
+    const info = this.subExtractor(viewable.index);
+    if (!info) {
+      return null as any as ViewToken;
+    }
+    const keyExtractorWithNullableIndex = info.section.keyExtractor;
+    const keyExtractorWithNonNullableIndex =
+      this.props.keyExtractor || defaultKeyExtractor;
+    const key =
+      keyExtractorWithNullableIndex !== null &&
+      keyExtractorWithNullableIndex !== undefined
+        ? keyExtractorWithNullableIndex(viewable.item, info.index!)
+        : keyExtractorWithNonNullableIndex(viewable.item, info.index ?? 0);
+
+    return {
+      ...viewable,
+      index: info.index,
+      key,
+      section: info.section,
+    };
+  };
+
+  private onViewableItemsChanged = ({
+    viewableItems,
+    changed,
+  }: {
+    viewableItems: Array<ViewToken>;
+    changed: Array<ViewToken>;
+  }) => {
+    const onViewableItemsChanged = this.props.onViewableItemsChanged;
+    if (
+      onViewableItemsChanged !== null &&
+      onViewableItemsChanged !== undefined
+    ) {
+      onViewableItemsChanged({
+        viewableItems: viewableItems
+          .map(this.convertViewable, this)
+          .filter(Boolean),
+        changed: changed.map(this.convertViewable, this).filter(Boolean),
+      });
+    }
+  };
+
   private renderItem =
     (listItemCount: number) =>
     ({ item, index }: { item: ItemT; index: number }) => {
@@ -306,7 +351,11 @@ export default class InvertedSectionList<
         getItem={this.getSectionItem}
         getItemCount={() => itemCount}
         stickyHeaderIndices={stickyHeaderIndices}
-        // TODO: onViewableItemsChanged
+        onViewableItemsChanged={
+          this.props.onViewableItemsChanged
+            ? this.onViewableItemsChanged
+            : undefined
+        }
         inverted
       />
     );
