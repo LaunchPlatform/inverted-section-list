@@ -6,6 +6,7 @@ import {
   SectionListProps,
   VirtualizedList,
   ViewToken,
+  ScrollView,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
 
@@ -303,6 +304,10 @@ export default class InvertedSectionList<
       }
     };
 
+  private renderScrollComponent = (props: any) => {
+    return <ScrollView {...props} />;
+  };
+
   render() {
     const {
       // don't pass through, rendered with renderItem
@@ -347,6 +352,7 @@ export default class InvertedSectionList<
         {...passThroughProps}
         keyExtractor={this.keyExtractor}
         renderItem={renderItem}
+        renderScrollComponent={this.renderScrollComponent}
         data={this.props.sections}
         getItem={this.getSectionItem}
         getItemCount={() => itemCount}
