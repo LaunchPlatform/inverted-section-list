@@ -206,6 +206,20 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
               (prevHeaderLayoutY || 0) + layoutHeight - scrollViewHeight;
             const delta = stickStartPoint - prevStickEndPoint;
             if (delta > 0) {
+              // The interpolate looks like this:
+              //
+              // ------
+              //       \
+              //        \            height = delta
+              //         \---------
+              //  prev^   ^current
+              //
+              // Basically, it starts from `prevStickEndPoint`, where the
+              // previous header stops scrolling. Then we starts the sticking by adding
+              // negative delta to the `translateY` to cancel the scrolling offset.
+              // Until the point, where we have scroll to where the current header's original
+              // position, at this point the `translateY` goes down to 0 so that it
+              // will scroll with the content
               inputRange = [
                 prevStickEndPoint - 1,
                 prevStickEndPoint,
