@@ -1,5 +1,11 @@
 import React, { FunctionComponent } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import {
+  SafeAreaView,
+  StyleSheet,
+  SectionList,
+  Text,
+  View,
+} from "react-native";
 import InvertedSectionList from "./src/InvertedSectionList";
 
 const styles = StyleSheet.create({
@@ -55,6 +61,9 @@ const App: FunctionComponent = () => (
       renderSectionHeader={({ section: { title } }) => (
         <Text style={styles.header}>{title}</Text>
       )}
+      stickySectionHeadersEnabled
     />
   </SafeAreaView>
 );
+
+export default App;

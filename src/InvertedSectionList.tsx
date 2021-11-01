@@ -1,15 +1,11 @@
 import invariant from "invariant";
-import { Component, ComponentType } from "react";
-import {
-  DefaultSectionT,
-  SectionListProps,
-  VirtualizedList,
-} from "react-native";
+import React, { Component, ComponentType } from "react";
+import { SectionBase, SectionListProps, VirtualizedList } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
 
-export type Props<ItemT, SectionT = DefaultSectionT> = Omit<
+export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
   SectionListProps<ItemT, SectionT>,
-  "inverted" | "invertStickyHeaders"
+  "inverted" | "invertStickyHeaders" | "stickyHeaderIndices" | "getItem"
 >;
 
 // ref: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizeUtils.js#L237-L245
@@ -23,7 +19,10 @@ function defaultKeyExtractor(item: any, index: number): string {
   return String(index);
 }
 
-interface SubExtractorResult<ItemT, SectionT> {
+interface SubExtractorResult<
+  ItemT,
+  SectionT extends SectionBase<ItemT, SectionT>
+> {
   readonly section: SectionT;
   readonly key: string;
   readonly index: number | null;
@@ -34,13 +33,16 @@ interface SubExtractorResult<ItemT, SectionT> {
   readonly trailingItem?: ItemT;
 }
 
-// Mostly from
+// Mostly copied from
 // https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js
+// and
+// https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/SectionList.js
+// By Facebook
 // MIT License: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/LICENSE
 // We only changes the things needed to be done to make inverted section list sticky header works
 export default class InvertedSectionList<
   ItemT,
-  SectionT = DefaultSectionT
+  SectionT extends SectionBase<ItemT, SectionT>
 > extends Component<Props<ItemT, SectionT>> {
   readonly updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
@@ -55,12 +57,11 @@ export default class InvertedSectionList<
     index: number
   ): SubExtractorResult<ItemT, SectionT> | undefined {
     let itemIndex = index;
-    const { getItem, getItemCount, keyExtractor, sections } = this.props;
+    const { keyExtractor, sections } = this.props;
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
-      const sectionData = section.data;
       const key = section.key || String(i);
-      const itemCount = getItemCount!(sectionData);
+      const itemCount = this.getItemCount(section);
       itemIndex -= 1; // The section adds an item for the header
       if (itemIndex >= itemCount + 1) {
         itemIndex -= itemCount + 1; // The section adds an item for the footer.
@@ -86,11 +87,11 @@ export default class InvertedSectionList<
         return {
           section,
           key:
-            key + ":" + extractor(getItem!(sectionData, itemIndex), itemIndex),
+            key + ":" + extractor(this.getItem(section, itemIndex), itemIndex),
           index: itemIndex,
-          leadingItem: getItem!(sectionData, itemIndex - 1),
+          leadingItem: this.getItem(section, itemIndex - 1),
           leadingSection: sections[i - 1],
-          trailingItem: getItem!(sectionData, itemIndex + 1),
+          trailingItem: this.getItem(section, itemIndex + 1),
           trailingSection: sections[i + 1],
         };
       }
@@ -112,7 +113,7 @@ export default class InvertedSectionList<
     const { SectionSeparatorComponent } = this.props;
     const isLastItemInList = index === listItemCount - 1;
     const isLastItemInSection =
-      info.index === this.props.getItemCount!(info.section) - 1;
+      info.index === this.getItemCount(info.section) - 1;
     if (SectionSeparatorComponent && isLastItemInSection) {
       return SectionSeparatorComponent as ComponentType<any>;
     }
@@ -122,18 +123,25 @@ export default class InvertedSectionList<
     return undefined;
   }
 
-  private getItem = (
+  private getItemCount(section: SectionT): number {
+    return section.data.length;
+  }
+
+  private getItem(section: SectionT, index: number): ItemT {
+    return section.data[index];
+  }
+
+  private getSectionItem = (
     sections: Array<SectionT> | null,
     index: number
   ): ItemT | SectionT | null => {
     if (sections === null) {
       return null;
     }
-    const { getItemCount, getItem } = this.props;
     let itemIdx = index - 1;
     for (let i = 0; i < sections.length; ++i) {
       const section = sections[i];
-      const itemCount = getItemCount!(section);
+      const itemCount = this.getItemCount(section);
       if (itemIdx === -1 || itemIdx === itemCount) {
         // We intend for there to be overflow by one on both ends of the list.
         // This will be for headers and footers. When returning a header or footer
@@ -141,7 +149,7 @@ export default class InvertedSectionList<
         return section;
       } else if (itemIdx < itemCount) {
         // If we are in the bounds of the list's data then return the item.
-        return getItem!(section, itemIdx);
+        return this.getItem(section, itemIdx);
       } else {
         itemIdx -= itemCount + 2; // Add two for the header and footer
       }
@@ -277,16 +285,19 @@ export default class InvertedSectionList<
 
       // Add two for the section header and footer.
       itemCount += 2;
-      itemCount += this.props.getItemCount!(section.data);
+      itemCount += this.getItemCount(section);
     }
     const renderItem = this.renderItem(itemCount);
 
     return (
       <VirtualizedList
+        {...passThroughProps}
         keyExtractor={this.keyExtractor}
         renderItem={renderItem}
         data={this.props.sections}
-        getItem={(sections, index) => this.getItem(sections, index) as ItemT}
+        getItem={(sections, index) =>
+          this.getSectionItem(sections, index) as ItemT
+        }
         getItemCount={() => itemCount}
         inverted
       />
