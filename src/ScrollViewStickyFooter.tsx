@@ -236,8 +236,9 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
                 prevHeaderLayoutY
               );
             } else {
-              const prevStickyEnds =
+              const prevStickEndPoint =
                 prevHeaderLayoutY + layoutHeight - scrollViewHeight;
+              const delta = stickStartPoint - prevStickEndPoint;
               console.log(
                 "key=",
                 (child as any).props.cellKey,
@@ -252,15 +253,15 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
                 "prevHeaderLayoutY=",
                 prevHeaderLayoutY,
                 "prevStickyEnds=",
-                prevStickyEnds
+                prevStickEndPoint
               );
               inputRange = [
-                prevStickyEnds,
-                prevStickyEnds + 1,
+                prevStickEndPoint,
+                prevStickEndPoint + 1,
                 stickStartPoint,
                 stickStartPoint + 1,
               ];
-              outputRange = [-prevStickyEnds, -prevStickyEnds, 0, 0];
+              outputRange = [-delta, -delta, 0, 0];
             }
             // If the next sticky header has not loaded yet (probably windowing) or is the last
             // we can just keep it sticked forever.

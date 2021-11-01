@@ -367,7 +367,10 @@ export default class InvertedSectionList<
                           nextIndex,
                           event.nativeEvent.layout.y
                         );
-                        nextRef.setPrevHeaderY(event.nativeEvent.layout.y);
+                        nextRef.setPrevHeaderY(
+                          event.nativeEvent.layout.y +
+                            event.nativeEvent.layout.height
+                        );
                       }
                     }
                   }
