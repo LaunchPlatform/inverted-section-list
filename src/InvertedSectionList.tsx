@@ -134,9 +134,9 @@ export default class InvertedSectionList<
   private getSectionItem = (
     sections: Array<SectionT> | null,
     index: number
-  ): ItemT | SectionT | null => {
+  ): ItemT => {
     if (sections === null) {
-      return null;
+      return undefined as any;
     }
     let itemIdx = index - 1;
     for (let i = 0; i < sections.length; ++i) {
@@ -146,7 +146,7 @@ export default class InvertedSectionList<
         // We intend for there to be overflow by one on both ends of the list.
         // This will be for headers and footers. When returning a header or footer
         // item the section itself is the item.
-        return section;
+        return section as any as ItemT;
       } else if (itemIdx < itemCount) {
         // If we are in the bounds of the list's data then return the item.
         return this.getItem(section, itemIdx);
@@ -154,7 +154,7 @@ export default class InvertedSectionList<
         itemIdx -= itemCount + 2; // Add two for the header and footer
       }
     }
-    return null;
+    return undefined as any;
   };
 
   private updatePropsFor = (cellKey: string, value: any) => {
@@ -298,9 +298,7 @@ export default class InvertedSectionList<
         keyExtractor={this.keyExtractor}
         renderItem={renderItem}
         data={this.props.sections}
-        getItem={(sections, index) =>
-          this.getSectionItem(sections, index) as ItemT
-        }
+        getItem={this.getSectionItem}
         getItemCount={() => itemCount}
         stickyHeaderIndices={stickyHeaderIndices}
         inverted
