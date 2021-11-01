@@ -215,65 +215,24 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
         //   scroll indefinitely.
         if (scrollViewHeight != null) {
           const stickStartPoint = layoutY + layoutHeight - scrollViewHeight;
-          const child = React.Children.only(this.props.children);
-
           if (stickStartPoint > 0) {
             if (prevHeaderLayoutY === null) {
               inputRange = [0, stickStartPoint, stickStartPoint + 1];
               outputRange = [-stickStartPoint, 0, 0];
-              console.log(
-                "key=",
-                (child as any).props.cellKey,
-                "layoutY=",
-                layoutY,
-                "layoutHeight=",
-                layoutHeight,
-                "scrollViewHeight=",
-                scrollViewHeight,
-                "stickStartPoint=",
-                stickStartPoint,
-                "prevHeaderLayoutY=",
-                prevHeaderLayoutY
-              );
             } else {
               const prevStickEndPoint =
                 prevHeaderLayoutY + layoutHeight - scrollViewHeight;
               const delta = stickStartPoint - prevStickEndPoint;
-              console.log(
-                "key=",
-                (child as any).props.cellKey,
-                "layoutY=",
-                layoutY,
-                "layoutHeight=",
-                layoutHeight,
-                "scrollViewHeight=",
-                scrollViewHeight,
-                "stickStartPoint=",
-                stickStartPoint,
-                "prevHeaderLayoutY=",
-                prevHeaderLayoutY,
-                "prevStickyEnds=",
-                prevStickEndPoint
-              );
-              inputRange = [
-                prevStickEndPoint - 1,
-                prevStickEndPoint,
-                stickStartPoint,
-                stickStartPoint + 1,
-              ];
-              outputRange = [-delta, -delta, 0, 0];
+              if (delta > 0) {
+                inputRange = [
+                  prevStickEndPoint - 1,
+                  prevStickEndPoint,
+                  stickStartPoint,
+                  stickStartPoint + 1,
+                ];
+                outputRange = [-delta, -delta, 0, 0];
+              }
             }
-            // If the next sticky header has not loaded yet (probably windowing) or is the last
-            // we can just keep it sticked forever.
-            // const collisionPoint =
-            //   (prevHeaderLayoutY || 0) - layoutHeight - scrollViewHeight;
-            // if (collisionPoint > stickStartPoint) {
-            //   inputRange.push(collisionPoint, collisionPoint + 1);
-            //   outputRange.push(
-            //     collisionPoint - stickStartPoint,
-            //     collisionPoint - stickStartPoint
-            //   );
-            // }
           }
         }
       }
