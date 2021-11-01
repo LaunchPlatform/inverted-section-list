@@ -199,39 +199,20 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
       let outputRange: Array<number> = [0, 0];
 
       if (measured) {
-        // The interpolation looks like:
-        // - Negative scroll: no translation
-        // - `stickStartPoint` is the point at which the header will start sticking.
-        //   It is calculated using the ScrollView viewport height so it is a the bottom.
-        // - Headers that are in the initial viewport will never stick, `stickStartPoint`
-        //   will be negative.
-        // - From 0 to `stickStartPoint` no translation. This will cause the header
-        //   to scroll normally until it reaches the top of the scroll view.
-        // - From `stickStartPoint` to when the next header y hits the bottom edge of the header: translate
-        //   equally to scroll. This will cause the header to stay at the top of the scroll view.
-        // - Past the collision with the next header y: no more translation. This will cause the
-        //   header to continue scrolling up and make room for the next sticky header.
-        //   In the case that there is no next header just translate equally to
-        //   scroll indefinitely.
         if (scrollViewHeight != null) {
           const stickStartPoint = layoutY + layoutHeight - scrollViewHeight;
           if (stickStartPoint > 0) {
-            if (prevHeaderLayoutY === null) {
-              inputRange = [0, stickStartPoint, stickStartPoint + 1];
-              outputRange = [-stickStartPoint, 0, 0];
-            } else {
-              const prevStickEndPoint =
-                prevHeaderLayoutY + layoutHeight - scrollViewHeight;
-              const delta = stickStartPoint - prevStickEndPoint;
-              if (delta > 0) {
-                inputRange = [
-                  prevStickEndPoint - 1,
-                  prevStickEndPoint,
-                  stickStartPoint,
-                  stickStartPoint + 1,
-                ];
-                outputRange = [-delta, -delta, 0, 0];
-              }
+            const prevStickEndPoint =
+              (prevHeaderLayoutY || 0) + layoutHeight - scrollViewHeight;
+            const delta = stickStartPoint - prevStickEndPoint;
+            if (delta > 0) {
+              inputRange = [
+                prevStickEndPoint - 1,
+                prevStickEndPoint,
+                stickStartPoint,
+                stickStartPoint + 1,
+              ];
+              outputRange = [-delta, -delta, 0, 0];
             }
           }
         }
