@@ -275,17 +275,20 @@ export default class InvertedSectionList<
 
     let itemCount = 0;
     for (const section of this.props.sections) {
+      const sectionItemCount = this.getItemCount(section);
       // Track the section header indices
       if (stickyHeaderIndices !== undefined) {
         // Notice: this is different from the original VirtualizedSectionList,
         //         since we are actually using footer as the header here, so need to + 1
         //         for the header
-        stickyHeaderIndices.push(itemCount + listHeaderOffset + 1);
+        stickyHeaderIndices.push(
+          itemCount + listHeaderOffset + sectionItemCount + 1
+        );
       }
 
       // Add two for the section header and footer.
       itemCount += 2;
-      itemCount += this.getItemCount(section);
+      itemCount += sectionItemCount;
     }
     const renderItem = this.renderItem(itemCount);
 
@@ -299,6 +302,7 @@ export default class InvertedSectionList<
           this.getSectionItem(sections, index) as ItemT
         }
         getItemCount={() => itemCount}
+        stickyHeaderIndices={stickyHeaderIndices}
         inverted
       />
     );

@@ -58,7 +58,7 @@ const App: FunctionComponent = () => (
       sections={DATA}
       keyExtractor={(item, index) => item + index}
       renderItem={({ item }) => <Item title={item} />}
-      renderSectionHeader={({ section: { title } }) => (
+      renderSectionFooter={({ section: { title } }) => (
         <Text style={styles.header}>{title}</Text>
       )}
       stickySectionHeadersEnabled
