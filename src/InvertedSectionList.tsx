@@ -44,10 +44,6 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
   readonly _updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
   readonly _updatePropsMap: Record<string, (props: any) => void> = {};
-  _listRef: React.ElementRef<typeof VirtualizedList>;
-  _captureRef = (ref) => {
-    this._listRef = ref;
-  };
 
   private keyExtractor = (item: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -110,13 +106,14 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
       return undefined;
     }
     const ItemSeparatorComponent =
-      info.section.ItemSeparatorComponent || this.props.ItemSeparatorComponent;
+      (info.section as any).ItemSeparatorComponent ||
+      this.props.ItemSeparatorComponent;
     const { SectionSeparatorComponent } = this.props;
     const isLastItemInList = index === listItemCount - 1;
     const isLastItemInSection =
-      info.index === this.props.getItemCount!(info.section.data) - 1;
+      info.index === this.props.getItemCount!(info.section) - 1;
     if (SectionSeparatorComponent && isLastItemInSection) {
-      return SectionSeparatorComponent;
+      return SectionSeparatorComponent as ComponentType<any>;
     }
     if (ItemSeparatorComponent && !isLastItemInSection && !isLastItemInList) {
       return ItemSeparatorComponent;
@@ -151,21 +148,21 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     return null;
   };
 
-  private _updatePropsFor = (cellKey: string, value: any) => {
+  private updatePropsFor = (cellKey: string, value: any) => {
     const updateProps = this._updatePropsMap[cellKey];
     if (updateProps != null) {
       updateProps(value);
     }
   };
 
-  private _updateHighlightFor = (cellKey: string, value: any) => {
+  private updateHighlightFor = (cellKey: string, value: any) => {
     const updateHighlight = this._updateHighlightMap[cellKey];
     if (updateHighlight != null) {
       updateHighlight(value);
     }
   };
 
-  private _setUpdateHighlightFor = (
+  private setUpdateHighlightFor = (
     cellKey: string,
     updateHighlightFn?: ((highlight: boolean) => void) | null
   ) => {
@@ -176,7 +173,7 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     }
   };
 
-  private _setUpdatePropsFor = (
+  private setUpdatePropsFor = (
     cellKey: string,
     updatePropsFn?: ((props: any) => void) | null
   ) => {
@@ -217,7 +214,9 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
           <ItemWithSeparator
             SeparatorComponent={SeparatorComponent}
             LeadingSeparatorComponent={
-              infoIndex === 0 ? this.props.SectionSeparatorComponent : undefined
+              infoIndex === 0
+                ? (this.props.SectionSeparatorComponent as any)
+                : undefined
             }
             cellKey={info.key}
             index={infoIndex}
@@ -226,11 +225,11 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
             leadingSection={info.leadingSection}
             prevCellKey={(this.subExtractor(index - 1) || {}).key}
             // Callback to provide updateHighlight for this item
-            setSelfHighlightCallback={this._setUpdateHighlightFor}
-            setSelfUpdatePropsCallback={this._setUpdatePropsFor}
+            setSelfHighlightCallback={this.setUpdateHighlightFor}
+            setSelfUpdatePropsCallback={this.setUpdatePropsFor}
             // Provide child ability to set highlight/updateProps for previous item using prevCellKey
-            updateHighlightFor={this._updateHighlightFor}
-            updatePropsFor={this._updatePropsFor}
+            updateHighlightFor={this.updateHighlightFor}
+            updatePropsFor={this.updatePropsFor}
             renderItem={renderItem}
             section={info.section}
             trailingItem={info.trailingItem}
@@ -282,7 +281,7 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
         keyExtractor={this.keyExtractor}
         renderItem={renderItem}
         data={this.props.sections}
-        getItem={(sections, index) => this.getItem(sections, index)}
+        getItem={(sections, index) => this.getItem(sections, index) as ItemT}
         getItemCount={() => itemCount}
         inverted
       />
