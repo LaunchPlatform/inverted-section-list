@@ -5,7 +5,7 @@ import {
   SectionListProps,
   VirtualizedList,
 } from "react-native";
-import { ItemWithSeparator } from "react-native/Libraries/Lists/VirtualizedSectionList";
+import ItemWithSeparator from "./ItemWithSeparator";
 
 export type Props<ItemT, SectionT = DefaultSectionT> = Omit<
   SectionListProps<ItemT, SectionT>,
@@ -41,6 +41,14 @@ interface SubExtractorResult<ItemT, SectionT> {
 class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
   Props<ItemT, SectionT>
 > {
+  readonly _updateHighlightMap: Record<string, (hightlight: boolean) => void> =
+    {};
+  readonly _updatePropsMap: Record<string, (props: any) => void> = {};
+  _listRef: React.ElementRef<typeof VirtualizedList>;
+  _captureRef = (ref) => {
+    this._listRef = ref;
+  };
+
   private keyExtractor = (item: ItemT, index: number) => {
     const info = this.subExtractor(index);
     return (info && info.key) || String(index);
@@ -96,10 +104,10 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     index: number,
     listItemCount: number,
     info?: SubExtractorResult<ItemT, SectionT>
-  ): ComponentType<any> | null {
+  ): ComponentType<any> | undefined {
     info = info || this.subExtractor(index);
     if (!info) {
-      return null;
+      return undefined;
     }
     const ItemSeparatorComponent =
       info.section.ItemSeparatorComponent || this.props.ItemSeparatorComponent;
@@ -113,10 +121,13 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     if (ItemSeparatorComponent && !isLastItemInSection && !isLastItemInList) {
       return ItemSeparatorComponent;
     }
-    return null;
+    return undefined;
   }
 
-  private getItem = (sections: Array<SectionT> | null, index: number): any => {
+  private getItem = (
+    sections: Array<SectionT> | null,
+    index: number
+  ): ItemT | SectionT | null => {
     if (sections === null) {
       return null;
     }
@@ -140,6 +151,42 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     return null;
   };
 
+  private _updatePropsFor = (cellKey: string, value: any) => {
+    const updateProps = this._updatePropsMap[cellKey];
+    if (updateProps != null) {
+      updateProps(value);
+    }
+  };
+
+  private _updateHighlightFor = (cellKey: string, value: any) => {
+    const updateHighlight = this._updateHighlightMap[cellKey];
+    if (updateHighlight != null) {
+      updateHighlight(value);
+    }
+  };
+
+  private _setUpdateHighlightFor = (
+    cellKey: string,
+    updateHighlightFn?: ((highlight: boolean) => void) | null
+  ) => {
+    if (updateHighlightFn !== undefined && updateHighlightFn !== null) {
+      this._updateHighlightMap[cellKey] = updateHighlightFn;
+    } else {
+      delete this._updateHighlightMap[cellKey];
+    }
+  };
+
+  private _setUpdatePropsFor = (
+    cellKey: string,
+    updatePropsFn?: ((props: any) => void) | null
+  ) => {
+    if (updatePropsFn !== undefined && updatePropsFn !== null) {
+      this._updatePropsMap[cellKey] = updatePropsFn;
+    } else {
+      delete this._updatePropsMap[cellKey];
+    }
+  };
+
   private renderItem =
     (listItemCount: number) =>
     ({ item, index }: { item: ItemT; index: number }) => {
@@ -148,7 +195,7 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
         return null;
       }
       const infoIndex = info.index;
-      if (infoIndex == null) {
+      if (infoIndex === null) {
         const { section } = info;
         if (info.header === true) {
           const { renderSectionHeader } = this.props;
