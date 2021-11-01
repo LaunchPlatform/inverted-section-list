@@ -63,9 +63,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
     | null = null;
   private _debounceTimeout: number = Platform.OS === "android" ? 15 : 64;
 
-  // TODO: this currying function almost seems like a mistake?
   setNextHeaderY: (y: number) => void = (y: number): void => {
-    console.log("@@@@@@@@@ setNextHeaderY", y);
     this._shouldRecreateTranslateY = true;
     this.setState({ nextHeaderLayoutY: y });
   };

@@ -1,5 +1,11 @@
 import invariant from "invariant";
-import React, { Component, ComponentType } from "react";
+import React, {
+  Component,
+  ComponentType,
+  ForwardedRef,
+  forwardRef,
+  RefObject,
+} from "react";
 import {
   Platform,
   SectionBase,
@@ -7,9 +13,13 @@ import {
   VirtualizedList,
   ViewToken,
   ScrollView,
+  LayoutChangeEvent,
+  ScrollViewProps,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
-import ScrollViewStickyFooter from "./ScrollViewStickyFooter";
+import ScrollViewStickyFooter, {
+  Props as StickyFooterProps,
+} from "./ScrollViewStickyFooter";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
   SectionListProps<ItemT, SectionT>,
@@ -55,6 +65,11 @@ export default class InvertedSectionList<
   readonly updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
   readonly updatePropsMap: Record<string, (props: any) => void> = {};
+  readonly headerLayoutYs = new Map<string, number>();
+  readonly stickyHeaderRefs = new Map<
+    string,
+    RefObject<ScrollViewStickyFooter>
+  >();
 
   private keyExtractor = (item: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -305,9 +320,52 @@ export default class InvertedSectionList<
       }
     };
 
-  private renderScrollComponent = (props: any) => {
+  private onStickyHeaderLayout = (
+    index: number,
+    event: LayoutChangeEvent,
+    key: string,
+    stickyHeaderIndices: Array<number>
+  ) => {
+    const layoutY = event.nativeEvent.layout.y;
+    this.headerLayoutYs.set(key, layoutY);
+
+    const indexOfIndex = stickyHeaderIndices.indexOf(index);
+    const nextHeaderIndex = stickyHeaderIndices[indexOfIndex - 1];
+    if (nextHeaderIndex != null) {
+      const nextHeader = this.stickyHeaderRefs.get(key);
+      nextHeader &&
+        nextHeader.setNextHeaderY &&
+        nextHeader.setNextHeaderY(layoutY);
+    }
+  };
+
+  private renderScrollComponent = (props: ScrollViewProps) => {
+    const { stickyHeaderIndices, ...remain } = props;
     return (
-      <ScrollView StickyHeaderComponent={ScrollViewStickyFooter} {...props} />
+      <ScrollView
+        StickyHeaderComponent={forwardRef(
+          (
+            stickyFooterProps: StickyFooterProps,
+            ref: ForwardedRef<ScrollViewStickyFooter>
+          ) => {
+            const child: React.ReactNode = React.Children.only(
+              stickyFooterProps.children
+            );
+            const { index, cellKey }: { index: number; cellKey: string } = (
+              child as any
+            ).props;
+            const indexOfIndex = (stickyHeaderIndices ?? []).indexOf(index);
+            this.stickyHeaderRefs.set(
+              cellKey,
+              ref as RefObject<ScrollViewStickyFooter>
+            );
+
+            return <ScrollViewStickyFooter ref={ref} {...stickyFooterProps} />;
+          }
+        )}
+        stickyHeaderIndices={stickyHeaderIndices}
+        {...remain}
+      />
     );
   };
 
