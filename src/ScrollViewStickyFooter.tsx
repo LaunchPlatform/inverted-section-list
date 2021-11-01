@@ -65,6 +65,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
 
   // TODO: this currying function almost seems like a mistake?
   setNextHeaderY: (y: number) => void = (y: number): void => {
+    console.log("@@@@@@@@@ setNextHeaderY", y);
     this._shouldRecreateTranslateY = true;
     this.setState({ nextHeaderLayoutY: y });
   };
