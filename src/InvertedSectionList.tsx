@@ -38,12 +38,13 @@ interface SubExtractorResult<ItemT, SectionT> {
 // https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js
 // MIT License: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/LICENSE
 // We only changes the things needed to be done to make inverted section list sticky header works
-class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
-  Props<ItemT, SectionT>
-> {
-  readonly _updateHighlightMap: Record<string, (hightlight: boolean) => void> =
+export default class InvertedSectionList<
+  ItemT,
+  SectionT = DefaultSectionT
+> extends Component<Props<ItemT, SectionT>> {
+  readonly updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
-  readonly _updatePropsMap: Record<string, (props: any) => void> = {};
+  readonly updatePropsMap: Record<string, (props: any) => void> = {};
 
   private keyExtractor = (item: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -96,7 +97,7 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     }
   }
 
-  private _getSeparatorComponent(
+  private getSeparatorComponent(
     index: number,
     listItemCount: number,
     info?: SubExtractorResult<ItemT, SectionT>
@@ -149,14 +150,14 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
   };
 
   private updatePropsFor = (cellKey: string, value: any) => {
-    const updateProps = this._updatePropsMap[cellKey];
+    const updateProps = this.updatePropsMap[cellKey];
     if (updateProps != null) {
       updateProps(value);
     }
   };
 
   private updateHighlightFor = (cellKey: string, value: any) => {
-    const updateHighlight = this._updateHighlightMap[cellKey];
+    const updateHighlight = this.updateHighlightMap[cellKey];
     if (updateHighlight != null) {
       updateHighlight(value);
     }
@@ -167,9 +168,9 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     updateHighlightFn?: ((highlight: boolean) => void) | null
   ) => {
     if (updateHighlightFn !== undefined && updateHighlightFn !== null) {
-      this._updateHighlightMap[cellKey] = updateHighlightFn;
+      this.updateHighlightMap[cellKey] = updateHighlightFn;
     } else {
-      delete this._updateHighlightMap[cellKey];
+      delete this.updateHighlightMap[cellKey];
     }
   };
 
@@ -178,9 +179,9 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     updatePropsFn?: ((props: any) => void) | null
   ) => {
     if (updatePropsFn !== undefined && updatePropsFn !== null) {
-      this._updatePropsMap[cellKey] = updatePropsFn;
+      this.updatePropsMap[cellKey] = updatePropsFn;
     } else {
-      delete this._updatePropsMap[cellKey];
+      delete this.updatePropsMap[cellKey];
     }
   };
 
@@ -196,15 +197,19 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
         const { section } = info;
         if (info.header === true) {
           const { renderSectionHeader } = this.props;
-          return renderSectionHeader ? renderSectionHeader({ section }) : null;
+          return renderSectionHeader
+            ? renderSectionHeader({ section: section as any })
+            : null;
         } else {
           const { renderSectionFooter } = this.props;
-          return renderSectionFooter ? renderSectionFooter({ section }) : null;
+          return renderSectionFooter
+            ? renderSectionFooter({ section: section as any })
+            : null;
         }
       } else {
         const renderItem =
           (info.section as any).renderItem || this.props.renderItem;
-        const SeparatorComponent = this._getSeparatorComponent(
+        const SeparatorComponent = this.getSeparatorComponent(
           index,
           listItemCount,
           info
