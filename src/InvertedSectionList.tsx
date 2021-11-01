@@ -1,6 +1,11 @@
 import invariant from "invariant";
 import React, { Component, ComponentType } from "react";
-import { SectionBase, SectionListProps, VirtualizedList } from "react-native";
+import {
+  Platform,
+  SectionBase,
+  SectionListProps,
+  VirtualizedList,
+} from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
@@ -262,16 +267,16 @@ export default class InvertedSectionList<
       renderSectionFooter,
       renderSectionHeader,
       sections: _sections,
-      stickySectionHeadersEnabled,
+      stickySectionHeadersEnabled: _stickySectionHeadersEnabled,
       ...passThroughProps
     } = this.props;
 
     const listHeaderOffset = this.props.ListHeaderComponent ? 1 : 0;
+    const stickySectionHeadersEnabled =
+      _stickySectionHeadersEnabled ?? Platform.OS === "ios";
 
-    const stickyHeaderIndices: Array<number> | undefined = this.props
-      .stickySectionHeadersEnabled
-      ? []
-      : undefined;
+    const stickyHeaderIndices: Array<number> | undefined =
+      stickySectionHeadersEnabled ? [] : undefined;
 
     let itemCount = 0;
     for (const section of this.props.sections) {
@@ -301,6 +306,7 @@ export default class InvertedSectionList<
         getItem={this.getSectionItem}
         getItemCount={() => itemCount}
         stickyHeaderIndices={stickyHeaderIndices}
+        // TODO: onViewableItemsChanged
         inverted
       />
     );
