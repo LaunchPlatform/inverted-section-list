@@ -1,11 +1,5 @@
-import {
-  ComponentType,
-  FunctionComponent,
-  useState,
-  useEffect,
-  PropsWithChildren,
-} from "react";
-import { View, DefaultSectionT, InteractionManager } from "react-native";
+import { ComponentType, PropsWithChildren, useEffect, useState } from "react";
+import { View } from "react-native";
 
 interface CommonProps<ItemT, SectionT> {
   readonly section: SectionT;
@@ -27,7 +21,7 @@ export interface Props<ItemT, SectionT> extends CommonProps<ItemT, SectionT> {
   ) => void;
   setSelfUpdatePropsCallback: (
     cellKey: string,
-    updateFn?: ((hightlight: boolean) => void) | null
+    updateFn?: ((props: CommonProps<ItemT, SectionT>) => void) | null
   ) => void;
   prevCellKey?: string;
   updateHighlightFor: (prevCellKey: string, value: boolean) => void;
