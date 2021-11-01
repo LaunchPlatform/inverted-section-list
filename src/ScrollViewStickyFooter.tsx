@@ -216,17 +216,51 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
         if (scrollViewHeight != null) {
           const stickStartPoint = layoutY + layoutHeight - scrollViewHeight;
           const child = React.Children.only(this.props.children);
-          console.log(
-            "xxxxxxxxx",
-            (child as any).props.cellKey,
-            stickStartPoint,
-            prevHeaderLayoutY
-          );
+
           if (stickStartPoint > 0) {
             if (prevHeaderLayoutY === null) {
               inputRange = [0, stickStartPoint, stickStartPoint + 1];
               outputRange = [-stickStartPoint, 0, 0];
+              console.log(
+                "key=",
+                (child as any).props.cellKey,
+                "layoutY=",
+                layoutY,
+                "layoutHeight=",
+                layoutHeight,
+                "scrollViewHeight=",
+                scrollViewHeight,
+                "stickStartPoint=",
+                stickStartPoint,
+                "prevHeaderLayoutY=",
+                prevHeaderLayoutY
+              );
             } else {
+              const prevStickyEnds =
+                prevHeaderLayoutY + layoutHeight - scrollViewHeight;
+              console.log(
+                "key=",
+                (child as any).props.cellKey,
+                "layoutY=",
+                layoutY,
+                "layoutHeight=",
+                layoutHeight,
+                "scrollViewHeight=",
+                scrollViewHeight,
+                "stickStartPoint=",
+                stickStartPoint,
+                "prevHeaderLayoutY=",
+                prevHeaderLayoutY,
+                "prevStickyEnds=",
+                prevStickyEnds
+              );
+              inputRange = [
+                prevStickyEnds,
+                prevStickyEnds + 1,
+                stickStartPoint,
+                stickStartPoint + 1,
+              ];
+              outputRange = [-prevStickyEnds, -prevStickyEnds, 0, 0];
             }
             // If the next sticky header has not loaded yet (probably windowing) or is the last
             // we can just keep it sticked forever.
