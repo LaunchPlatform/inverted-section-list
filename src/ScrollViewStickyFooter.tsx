@@ -167,8 +167,8 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
 
     this.props.onLayout(event);
     const child = React.Children.only(this.props.children);
-    if (child.props.onLayout) {
-      child.props.onLayout(event);
+    if ((child as any).props.onLayout) {
+      (child as any).props.onLayout(event);
     }
   };
 
@@ -236,7 +236,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
         }),
         isFabric,
         this.props.hiddenOnScroll
-          ? new Animated.AnimatedDiffClamp(
+          ? Animated.diffClamp(
               this.props.scrollAnimatedValue
                 .interpolate({
                   extrapolateLeft: "clamp",
@@ -265,13 +265,13 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
         : null;
 
     return (
-      <AnimatedView
+      <Animated.View
         collapsable={false}
         nativeID={this.props.nativeID}
         onLayout={this._onLayout}
         ref={this._setComponentRef}
         style={[
-          child.props.style,
+          (child as any).props.style,
           styles.header,
           { transform: [{ translateY: this._translateY }] },
         ]}
@@ -279,11 +279,11 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
           passthroughAnimatedPropExplicitValues
         }
       >
-        {React.cloneElement(child, {
+        {React.cloneElement(child as any, {
           style: styles.fill, // We transfer the child style to the wrapper.
           onLayout: undefined, // we call this manually through our this._onLayout
         })}
-      </AnimatedView>
+      </Animated.View>
     );
   }
 }
