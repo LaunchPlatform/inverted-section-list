@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
+import ScrollViewStickyFooter from "./ScrollViewStickyFooter";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
   SectionListProps<ItemT, SectionT>,
@@ -305,7 +306,9 @@ export default class InvertedSectionList<
     };
 
   private renderScrollComponent = (props: any) => {
-    return <ScrollView {...props} />;
+    return (
+      <ScrollView StickyHeaderComponent={ScrollViewStickyFooter} {...props} />
+    );
   };
 
   render() {
