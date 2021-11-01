@@ -213,6 +213,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
               //        \            height = delta
               //         \---------
               //  prev^   ^current
+              //        ^ width = delta
               //
               // Basically, it starts from `prevStickEndPoint`, where the
               // previous header stops scrolling. Then we starts the sticking by adding
