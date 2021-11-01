@@ -1,9 +1,9 @@
 import invariant from "invariant";
 import { Component, ComponentType } from "react";
 import {
-  VirtualizedList,
-  SectionListProps,
   DefaultSectionT,
+  SectionListProps,
+  VirtualizedList,
 } from "react-native";
 import { ItemWithSeparator } from "react-native/Libraries/Lists/VirtualizedSectionList";
 
@@ -94,8 +94,8 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
 
   private _getSeparatorComponent(
     index: number,
-    info?: SubExtractorResult<ItemT, SectionT>,
-    listItemCount: number
+    listItemCount: number,
+    info?: SubExtractorResult<ItemT, SectionT>
   ): ComponentType<any> | null {
     info = info || this.subExtractor(index);
     if (!info) {
@@ -115,6 +115,30 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
     }
     return null;
   }
+
+  private getItem = (sections: Array<SectionT> | null, index: number): any => {
+    if (sections === null) {
+      return null;
+    }
+    const { getItemCount, getItem } = this.props;
+    let itemIdx = index - 1;
+    for (let i = 0; i < sections.length; ++i) {
+      const section = sections[i];
+      const itemCount = getItemCount!(section);
+      if (itemIdx === -1 || itemIdx === itemCount) {
+        // We intend for there to be overflow by one on both ends of the list.
+        // This will be for headers and footers. When returning a header or footer
+        // item the section itself is the item.
+        return section;
+      } else if (itemIdx < itemCount) {
+        // If we are in the bounds of the list's data then return the item.
+        return getItem!(section, itemIdx);
+      } else {
+        itemIdx -= itemCount + 2; // Add two for the header and footer
+      }
+    }
+    return null;
+  };
 
   private renderItem =
     (listItemCount: number) =>
@@ -138,8 +162,8 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
           (info.section as any).renderItem || this.props.renderItem;
         const SeparatorComponent = this._getSeparatorComponent(
           index,
-          info,
-          listItemCount
+          listItemCount,
+          info
         );
         invariant(renderItem, "no renderItem!");
         return (
@@ -164,7 +188,7 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
             section={info.section}
             trailingItem={info.trailingItem}
             trailingSection={info.trailingSection}
-            inverted={!!this.props.inverted}
+            inverted
           />
         );
       }
@@ -204,10 +228,17 @@ class InvertedSectionList<ItemT, SectionT = DefaultSectionT> extends Component<
       itemCount += 2;
       itemCount += this.props.getItemCount!(section.data);
     }
-    const renderItem = this._renderItem(itemCount);
+    const renderItem = this.renderItem(itemCount);
 
     return (
-      <VirtualizedList getItem={() => {}} getItemCount={() => {}} inverted />
+      <VirtualizedList
+        keyExtractor={this.keyExtractor}
+        renderItem={renderItem}
+        data={this.props.sections}
+        getItem={(sections, index) => this.getItem(sections, index)}
+        getItemCount={() => itemCount}
+        inverted
+      />
     );
   }
 }
