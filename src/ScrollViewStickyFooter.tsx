@@ -256,8 +256,8 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
                 prevStickEndPoint
               );
               inputRange = [
+                prevStickEndPoint - 1,
                 prevStickEndPoint,
-                prevStickEndPoint + 1,
                 stickStartPoint,
                 stickStartPoint + 1,
               ];
