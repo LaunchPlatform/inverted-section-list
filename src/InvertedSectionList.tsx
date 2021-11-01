@@ -66,10 +66,7 @@ export default class InvertedSectionList<
     {};
   readonly updatePropsMap: Record<string, (props: any) => void> = {};
   readonly headerLayoutYs = new Map<string, number>();
-  readonly stickyHeaderRefs = new Map<
-    string,
-    RefObject<ScrollViewStickyFooter>
-  >();
+  readonly stickyHeaderRefs = new Map<string, ScrollViewStickyFooter | null>();
 
   private keyExtractor = (item: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -94,6 +91,7 @@ export default class InvertedSectionList<
           key: key + ":header",
           index: null,
           header: true,
+          leadingSection: sections[i - 1],
           trailingSection: sections[i + 1],
         };
       } else if (itemIndex === itemCount) {
@@ -102,6 +100,7 @@ export default class InvertedSectionList<
           key: key + ":footer",
           index: null,
           header: false,
+          leadingSection: sections[i - 1],
           trailingSection: sections[i + 1],
         };
       } else {
@@ -320,25 +319,6 @@ export default class InvertedSectionList<
       }
     };
 
-  private onStickyHeaderLayout = (
-    index: number,
-    event: LayoutChangeEvent,
-    key: string,
-    stickyHeaderIndices: Array<number>
-  ) => {
-    const layoutY = event.nativeEvent.layout.y;
-    this.headerLayoutYs.set(key, layoutY);
-
-    const indexOfIndex = stickyHeaderIndices.indexOf(index);
-    const nextHeaderIndex = stickyHeaderIndices[indexOfIndex - 1];
-    if (nextHeaderIndex != null) {
-      const nextHeader = this.stickyHeaderRefs.get(key);
-      nextHeader &&
-        nextHeader.setNextHeaderY &&
-        nextHeader.setNextHeaderY(layoutY);
-    }
-  };
-
   private renderScrollComponent = (props: ScrollViewProps) => {
     const { stickyHeaderIndices, ...remain } = props;
     return (
@@ -354,13 +334,48 @@ export default class InvertedSectionList<
             const { index, cellKey }: { index: number; cellKey: string } = (
               child as any
             ).props;
-            const indexOfIndex = (stickyHeaderIndices ?? []).indexOf(index);
-            this.stickyHeaderRefs.set(
-              cellKey,
-              ref as RefObject<ScrollViewStickyFooter>
-            );
 
-            return <ScrollViewStickyFooter ref={ref} {...stickyFooterProps} />;
+            const { onLayout, ...remain } = stickyFooterProps;
+            return (
+              <ScrollViewStickyFooter
+                ref={(footerRef) => {
+                  this.stickyHeaderRefs.set(cellKey, footerRef);
+                  if (typeof ref === "function") {
+                    ref(footerRef);
+                  } else if (ref !== null) {
+                    ref.current = footerRef;
+                  }
+                }}
+                onLayout={(event: LayoutChangeEvent) => {
+                  const indexOfIndex = (stickyHeaderIndices ?? []).indexOf(
+                    index
+                  );
+                  const nextIndex = (stickyHeaderIndices ?? [])[
+                    indexOfIndex + 1
+                  ];
+                  if (nextIndex !== undefined) {
+                    const info = this.subExtractor(nextIndex);
+                    const nextKey = info?.key;
+                    if (nextKey !== undefined && nextKey !== null) {
+                      const nextRef = this.stickyHeaderRefs.get(nextKey);
+                      if (nextRef !== null && nextRef !== undefined) {
+                        console.log(
+                          "setPrevHeaderY",
+                          cellKey,
+                          nextKey,
+                          index,
+                          nextIndex,
+                          event.nativeEvent.layout.y
+                        );
+                        nextRef.setPrevHeaderY(event.nativeEvent.layout.y);
+                      }
+                    }
+                  }
+                  onLayout(event);
+                }}
+                {...remain}
+              />
+            );
           }
         )}
         stickyHeaderIndices={stickyHeaderIndices}

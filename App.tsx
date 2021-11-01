@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
 const DATA = [
   {
     title: "Main dishes",
-    data: ["Pizza", "Burger", "Risotto"],
+    data: ["Pizza", "Burger", "Risotto", "a", "b", "c", "1", "2", "3"],
   },
   {
     title: "Sides",

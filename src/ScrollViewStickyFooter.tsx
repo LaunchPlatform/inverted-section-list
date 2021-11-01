@@ -16,23 +16,22 @@ const styles = StyleSheet.create({
   },
 });
 
-export type Props = PropsWithChildren<
-  Readonly<{
-    nextHeaderLayoutY: number;
-    onLayout: (event: LayoutChangeEvent) => void;
-    scrollAnimatedValue: Animated.Value;
-    // The height of the parent ScrollView. Currently only set when inverted.
-    scrollViewHeight: number;
-    nativeID?: string;
-    hiddenOnScroll?: boolean;
-  }>
->;
+export type Props = PropsWithChildren<{
+  nextHeaderLayoutY: number;
+  onLayout: (event: LayoutChangeEvent) => void;
+  scrollAnimatedValue: Animated.Value;
+  // The height of the parent ScrollView. Currently only set when inverted.
+  scrollViewHeight: number;
+  nativeID?: string;
+  hiddenOnScroll?: boolean;
+}>;
 
 type State = {
   measured: boolean;
   layoutY: number;
   layoutHeight: number;
   nextHeaderLayoutY: number;
+  prevHeaderLayoutY: number | null;
   translateY: number | null;
 };
 
@@ -47,6 +46,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
     layoutY: 0,
     layoutHeight: 0,
     nextHeaderLayoutY: this.props.nextHeaderLayoutY,
+    prevHeaderLayoutY: null,
     translateY: null,
   };
 
@@ -66,6 +66,11 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
   setNextHeaderY: (y: number) => void = (y: number): void => {
     this._shouldRecreateTranslateY = true;
     this.setState({ nextHeaderLayoutY: y });
+  };
+
+  setPrevHeaderY: (y: number | null) => void = (y: number | null): void => {
+    this._shouldRecreateTranslateY = true;
+    this.setState({ prevHeaderLayoutY: y });
   };
 
   componentWillUnmount() {
@@ -183,14 +188,15 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
       // eslint-disable-next-line dot-notation
       (this._ref && this._ref["_internalInstanceHandle"]?.stateNode?.canonical)
     );
+
     // Initially and in the case of updated props or layout, we
     // recreate this interpolated value. Otherwise, we do not recreate
     // when there are state changes.
     if (this._shouldRecreateTranslateY) {
       const { scrollViewHeight } = this.props;
-      const { measured, layoutHeight, layoutY, nextHeaderLayoutY } = this.state;
-      const inputRange: Array<number> = [-1, 0];
-      const outputRange: Array<number> = [0, 0];
+      const { measured, layoutHeight, layoutY, prevHeaderLayoutY } = this.state;
+      let inputRange: Array<number> = [-1, 0];
+      let outputRange: Array<number> = [0, 0];
 
       if (measured) {
         // The interpolation looks like:
@@ -209,22 +215,30 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
         //   scroll indefinitely.
         if (scrollViewHeight != null) {
           const stickStartPoint = layoutY + layoutHeight - scrollViewHeight;
+          const child = React.Children.only(this.props.children);
+          console.log(
+            "xxxxxxxxx",
+            (child as any).props.cellKey,
+            stickStartPoint,
+            prevHeaderLayoutY
+          );
           if (stickStartPoint > 0) {
-            inputRange.push(stickStartPoint);
-            outputRange.push(0);
-            inputRange.push(stickStartPoint + 1);
-            outputRange.push(1);
+            if (prevHeaderLayoutY === null) {
+              inputRange = [0, stickStartPoint, stickStartPoint + 1];
+              outputRange = [-stickStartPoint, 0, 0];
+            } else {
+            }
             // If the next sticky header has not loaded yet (probably windowing) or is the last
             // we can just keep it sticked forever.
-            const collisionPoint =
-              (nextHeaderLayoutY || 0) - layoutHeight - scrollViewHeight;
-            if (collisionPoint > stickStartPoint) {
-              inputRange.push(collisionPoint, collisionPoint + 1);
-              outputRange.push(
-                collisionPoint - stickStartPoint,
-                collisionPoint - stickStartPoint
-              );
-            }
+            // const collisionPoint =
+            //   (prevHeaderLayoutY || 0) - layoutHeight - scrollViewHeight;
+            // if (collisionPoint > stickStartPoint) {
+            //   inputRange.push(collisionPoint, collisionPoint + 1);
+            //   outputRange.push(
+            //     collisionPoint - stickStartPoint,
+            //     collisionPoint - stickStartPoint
+            //   );
+            // }
           }
         }
       }
