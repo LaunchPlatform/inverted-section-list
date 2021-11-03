@@ -359,14 +359,6 @@ export default class InvertedSectionList<
                     if (nextKey !== undefined && nextKey !== null) {
                       const nextRef = this.stickyHeaderRefs.get(nextKey);
                       if (nextRef !== null && nextRef !== undefined) {
-                        console.log(
-                          "setPrevHeaderY",
-                          cellKey,
-                          nextKey,
-                          index,
-                          nextIndex,
-                          event.nativeEvent.layout.y
-                        );
                         nextRef.setPrevHeaderY(
                           event.nativeEvent.layout.y +
                             event.nativeEvent.layout.height
