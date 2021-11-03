@@ -21,9 +21,9 @@ workflows:
   build:
     jobs:
       - node/run:
-        name: build
-        pkg-manager: yarn
-        yarn-run: build
+          name: build
+          pkg-manager: yarn
+          yarn-run: build
       - deploy:
-        requires:
-          - build
+          requires:
+            - build
