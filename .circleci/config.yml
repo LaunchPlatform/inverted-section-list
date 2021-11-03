@@ -25,4 +25,5 @@ workflows:
         pkg-manager: yarn
         yarn-run: build
       - deploy:
-        requires: build
+        requires:
+          - build
