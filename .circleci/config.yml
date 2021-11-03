@@ -6,12 +6,22 @@ version: 2.1
 orbs:
   node: circleci/node@4.7
 
+jobs:
+  deploy:
+    executor: node/default
+    steps:
+      - run:
+          name: "Create npmrc"
+          command: |
+            echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
+
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  build:
     jobs:
       - node/run:
           pkg-manager: yarn
           yarn-run: build
+      - deploy
+
