@@ -7,9 +7,16 @@ orbs:
   node: circleci/node@4.7
 
 jobs:
-  deploy:
+  build_and_deploy:
     executor: node/default
     steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: yarn
+      - run:
+          name: "Build"
+          command: |
+            yarn build
       - run:
           name: "Create npmrc"
           command: |
@@ -20,10 +27,4 @@ jobs:
 workflows:
   build:
     jobs:
-      - node/run:
-          name: build
-          pkg-manager: yarn
-          yarn-run: build
-      - deploy:
-          requires:
-            - build
+      - build_and_deploy
