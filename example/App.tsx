@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
-import InvertedSectionList from "inverted-section-list/InvertedSectionList";
+import InvertedSectionList from "inverted-section-list";
 
 const styles = StyleSheet.create({
   container: {
