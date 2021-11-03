@@ -56,7 +56,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
   private _ref: any; // TODO T53738161: flow type this, and the whole file
 
   // Fabric-only:
-  private _timer: NodeJS.Timeout | null = null;
+  private _timer: number | null = null;
   private _animatedValueListenerId: string | null = null;
   private _animatedValueListener:
     | ((valueObject: Readonly<{ value: number }>) => void)

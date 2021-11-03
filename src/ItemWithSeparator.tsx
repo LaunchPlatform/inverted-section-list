@@ -1,4 +1,9 @@
-import { ComponentType, PropsWithChildren, useEffect, useState } from "react";
+import React, {
+  ComponentType,
+  PropsWithChildren,
+  useEffect,
+  useState,
+} from "react";
 import { View } from "react-native";
 
 interface CommonProps<ItemT, SectionT> {

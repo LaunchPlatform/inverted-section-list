@@ -67,7 +67,7 @@ export default class InvertedSectionList<
   readonly headerLayoutYs = new Map<string, number>();
   readonly stickyHeaderRefs = new Map<string, ScrollViewStickyFooter | null>();
 
-  private keyExtractor = (item: ItemT, index: number) => {
+  private keyExtractor = (_: ItemT, index: number) => {
     const info = this.subExtractor(index);
     return (info && info.key) || String(index);
   };
@@ -117,6 +117,7 @@ export default class InvertedSectionList<
         };
       }
     }
+    return;
   }
 
   private getSeparatorComponent(
