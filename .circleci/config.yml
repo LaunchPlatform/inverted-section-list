@@ -32,6 +32,6 @@ workflows:
   build:
     jobs:
       - build_and_deploy:
-        filter:
-          tags:
-            only: /.+/
+          filters:
+            tags:
+              only: /.+/
