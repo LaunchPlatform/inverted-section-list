@@ -20,7 +20,11 @@ jobs:
       - run:
           name: "Create npmrc"
           command: |
-            echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
+            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+      - run:
+          name: "Publish"
+          command: |
+            npm publish
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
