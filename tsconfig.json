@@ -1,6 +1,26 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "target": "es5",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "declaration": true,
+    "newLine": "lf",
+    "outDir": "./dist",
+    "lib": [
+      "es6",
+      "dom"
+    ]
+  },
+  "types": [
+    "jest",
+    "node"
+  ],
+  "exclude": ["example"]
 }

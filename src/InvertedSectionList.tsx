@@ -4,17 +4,16 @@ import React, {
   ComponentType,
   ForwardedRef,
   forwardRef,
-  RefObject,
 } from "react";
 import {
+  LayoutChangeEvent,
   Platform,
+  ScrollView,
+  ScrollViewProps,
   SectionBase,
   SectionListProps,
-  VirtualizedList,
   ViewToken,
-  ScrollView,
-  LayoutChangeEvent,
-  ScrollViewProps,
+  VirtualizedList,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
 import ScrollViewStickyFooter, {
