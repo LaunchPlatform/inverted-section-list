@@ -1,5 +1,12 @@
 {
   "main": "node_modules/expo/AppEntry.js",
+  "description": "A React Native component that implements SectionList with inverted direction and working sticky header",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LaunchPlatform/inverted-section-list.git"
+  },
+  "author": "Fang-Pen Lin (fangpen@launchplatform.com)",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
