@@ -11,8 +11,13 @@
   "homepage": "https://github.com/LaunchPlatform/inverted-section-list",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "keywords": [
+    "react-native",
+    "section list",
+    "inverted",
+    "sticky header"
+  ],
   "scripts": {
-    "start": "yarn --cwd example start",
     "build": "tsc"
   },
   "peerDependencies": {
