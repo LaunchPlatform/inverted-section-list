@@ -177,7 +177,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
     }
   };
 
-  _setComponentRef = (ref: RefObject<Animated.View>) => {
+  _setComponentRef = (ref: RefObject<typeof Animated.View>) => {
     this._ref = ref;
   };
 
@@ -279,9 +279,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
           styles.header,
           { transform: [{ translateY: this._translateY }] },
         ]}
-        passthroughAnimatedPropExplicitValues={
-          passthroughAnimatedPropExplicitValues
-        }
+        {...{ passthroughAnimatedPropExplicitValues }}
       >
         {React.cloneElement(child as any, {
           style: styles.fill, // We transfer the child style to the wrapper.
