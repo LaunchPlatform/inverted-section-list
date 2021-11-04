@@ -3,7 +3,6 @@ import React, { Component, PropsWithChildren, RefObject } from "react";
 import {
   Animated,
   findNodeHandle,
-  flattenStyle,
   HostComponent,
   LayoutChangeEvent,
   Platform,
@@ -19,26 +18,21 @@ const {
   HORIZONTAL,
   VERTICAL,
 } = require("react-native/Libraries/Components/ScrollView/ScrollViewContext");
-const ScrollResponder =
-  require("react-native/Libraries/Components/ScrollView/ScrollResponder").default;
+const {
+  Mixin: ScrollResponderMixin,
+} = require("react-native/Libraries/Components/ScrollResponder");
 const {
   default: processDecelerationRate,
 } = require("react-native/Libraries/Components/ScrollView/processDecelerationRate");
-const {
-  default: setAndForwardRef,
-} = require("react-native/Libraries/Utilities/setAndForwardRef");
+const setAndForwardRef = require("react-native/Libraries/Utilities/setAndForwardRef");
 const {
   default: dismissKeyboard,
 } = require("react-native/Libraries/Utilities/dismissKeyboard");
 const {
   default: splitLayoutProps,
-} = require("react-native/Libraries/Utilities/splitLayoutProps");
-const {
-  default: flattenStyle,
-} = require("react-native/Libraries/StyleSheet/flattenStyle");
-const {
-  default: resolveAssetSource,
-} = require("react-native/Libraries/Image/resolveAssetSource");
+} = require("react-native/Libraries/StyleSheet/splitLayoutProps");
+const flattenStyle = require("react-native/Libraries/StyleSheet/flattenStyle");
+const resolveAssetSource = require("react-native/Libraries/Image/resolveAssetSource");
 const {
   attachNativeEvent,
 } = require("react-native/Libraries/Animated/AnimatedEvent");
@@ -98,8 +92,8 @@ type State = {
 
 function createScrollResponder(
   node: React.ElementRef<typeof ScrollView>
-): typeof ScrollResponder.Mixin {
-  const scrollResponder = { ...ScrollResponder.Mixin };
+): typeof ScrollResponderMixin {
+  const scrollResponder = { ...ScrollResponderMixin };
 
   for (const key in scrollResponder) {
     if (typeof scrollResponder[key] === "function") {
@@ -149,10 +143,10 @@ class ScrollView extends Component<Props, State> {
   static Context: typeof ScrollViewContext = ScrollViewContext;
 
   /**
-   * Part 1: Removing ScrollResponder.Mixin:
+   * Part 1: Removing ScrollResponderMixin:
    *
    * 1. Mixin methods should be flow typed. That's why we create a
-   *    copy of ScrollResponder.Mixin and attach it to this._scrollResponder.
+   *    copy of ScrollResponderMixin and attach it to this._scrollResponder.
    *    Otherwise, we'd have to manually declare each method on the component
    *    class and assign it a flow type.
    * 2. Mixin methods can call component methods, and access the component's
@@ -160,13 +154,13 @@ class ScrollView extends Component<Props, State> {
    *    component instance.
    * 3. Continued...
    */
-  _scrollResponder: typeof ScrollResponder.Mixin = createScrollResponder(this);
+  _scrollResponder: typeof ScrollResponderMixin = createScrollResponder(this);
 
   constructor(props: Props) {
     super(props);
 
     /**
-     * Part 2: Removing ScrollResponder.Mixin
+     * Part 2: Removing ScrollResponderMixin
      *
      * 3. Mixin methods access other mixin methods via dynamic dispatch using
      *    this. Since mixin methods are bound to the component instance, we need
@@ -176,27 +170,27 @@ class ScrollView extends Component<Props, State> {
      *    Since the object returned from that method is the ScrollView instance,
      *    we need to bind all mixin methods to the ScrollView instance.
      */
-    for (const key in ScrollResponder.Mixin) {
+    for (const key in ScrollResponderMixin) {
       if (
-        typeof ScrollResponder.Mixin[key] === "function" &&
+        typeof ScrollResponderMixin[key] === "function" &&
         key.startsWith("scrollResponder")
       ) {
         // $FlowFixMe - dynamically adding properties to a class
-        (this as any)[key] = ScrollResponder.Mixin[key].bind(this);
+        (this as any)[key] = ScrollResponderMixin[key].bind(this);
       }
     }
 
     /**
-     * Part 3: Removing ScrollResponder.Mixin
+     * Part 3: Removing ScrollResponderMixin
      *
      * 4. Mixins can initialize properties and use properties on the component
      *    instance.
      */
-    Object.keys(ScrollResponder.Mixin)
-      .filter((key) => typeof ScrollResponder.Mixin[key] !== "function")
+    Object.keys(ScrollResponderMixin)
+      .filter((key) => typeof ScrollResponderMixin[key] !== "function")
       .forEach((key) => {
         // $FlowFixMe - dynamically adding properties to a class
-        (this as any)[key] = ScrollResponder.Mixin[key];
+        (this as any)[key] = ScrollResponderMixin[key];
       });
   }
 
@@ -207,7 +201,7 @@ class ScrollView extends Component<Props, State> {
 
   state: State = {
     layoutHeight: null,
-    ...ScrollResponder.Mixin.scrollResponderMixinGetInitialState(),
+    ...ScrollResponderMixin.scrollResponderMixinGetInitialState(),
   };
 
   UNSAFE_componentWillMount() {
@@ -270,9 +264,9 @@ class ScrollView extends Component<Props, State> {
         ref.scrollToEnd = this.scrollToEnd;
         ref.flashScrollIndicators = this.flashScrollIndicators;
 
-        // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
+        // $FlowFixMe - This method was manually bound from ScrollResponderMixin
         ref.scrollResponderZoomTo = (this as any).scrollResponderZoomTo;
-        // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
+        // $FlowFixMe - This method was manually bound from ScrollResponderMixin
         ref.scrollResponderScrollNativeHandleToKeyboard = (
           this as any
         ).scrollResponderScrollNativeHandleToKeyboard;
