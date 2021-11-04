@@ -311,10 +311,10 @@ export default class InvertedSectionList<
 
   private renderScrollComponent = (props: ScrollViewProps) => (
     <ScrollView
-      {...{
+      {...({
         StickyHeaderComponent: ScrollViewStickyFooter,
         ...props,
-      }}
+      } as any)}
     />
   );
 

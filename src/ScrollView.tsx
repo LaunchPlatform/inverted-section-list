@@ -570,6 +570,13 @@ class ScrollView extends Component<Props, State> {
           const prevIndex = stickyHeaderIndices[indexOfIndex - 1];
           const nextKey = this._getKeyForIndex(nextIndex, childArray);
           const prevKey = this._getKeyForIndex(prevIndex, childArray);
+          const prevLayoutY = this._headerLayoutYs.get(prevKey);
+          const prevLayoutHeight = this._headerLayoutHeights.get(prevKey);
+          let prevHeaderLayoutY: number | undefined = undefined;
+          if (prevLayoutY != null && prevLayoutHeight != null) {
+            prevHeaderLayoutY = prevLayoutY + prevLayoutHeight;
+          }
+
           const StickyHeaderComponent =
             this.props.StickyHeaderComponent || ScrollViewStickyHeader;
           return (
@@ -578,12 +585,7 @@ class ScrollView extends Component<Props, State> {
               nativeID={"StickyHeader-" + key} /* TODO: T68258846. */
               ref={(ref) => this._setStickyHeaderRef(key, ref)}
               nextHeaderLayoutY={this._headerLayoutYs.get(nextKey)}
-              prevHeaderLayoutY={
-                prevKey !== undefined
-                  ? this._headerLayoutYs.get(prevKey) +
-                    this._headerLayoutHeights.get(prevKey)
-                  : undefined
-              }
+              prevHeaderLayoutY={prevHeaderLayoutY}
               onLayout={(event) =>
                 this._onStickyHeaderLayout(index, event, key)
               }
@@ -755,7 +757,7 @@ class ScrollView extends Component<Props, State> {
   }
 }
 
-function Wrapper(props: ScrollViewProps, ref: any) {
+function Wrapper(props: Props, ref: any) {
   return <ScrollView {...props} scrollViewRef={ref} />;
 }
 Wrapper.displayName = "ScrollView";
