@@ -9,6 +9,8 @@ import {
   EventSubscription,
   View,
   LayoutChangeEvent,
+  findNodeHandle,
+  Keyboard,
 } from "react-native";
 
 const AndroidHorizontalScrollViewNativeComponent =
@@ -125,6 +127,183 @@ export default class ScrollView extends Component<Props, State> {
     this._scrollAnimatedValue.setOffset(this.props.contentInset?.top ?? 0);
   }
 
+  componentDidMount() {
+    if (typeof this.props.keyboardShouldPersistTaps === "boolean") {
+      console.warn(
+        `'keyboardShouldPersistTaps={${
+          this.props.keyboardShouldPersistTaps === true ? "true" : "false"
+        }}' is deprecated. ` +
+          `Use 'keyboardShouldPersistTaps="${
+            this.props.keyboardShouldPersistTaps ? "always" : "never"
+          }"' instead`
+      );
+    }
+
+    this._keyboardWillOpenTo = null;
+    this._additionalScrollOffset = 0;
+
+    this._subscriptionKeyboardWillShow = Keyboard.addListener(
+      "keyboardWillShow",
+      this.scrollResponderKeyboardWillShow
+    );
+    this._subscriptionKeyboardWillHide = Keyboard.addListener(
+      "keyboardWillHide",
+      this.scrollResponderKeyboardWillHide
+    );
+    this._subscriptionKeyboardDidShow = Keyboard.addListener(
+      "keyboardDidShow",
+      this.scrollResponderKeyboardDidShow
+    );
+    this._subscriptionKeyboardDidHide = Keyboard.addListener(
+      "keyboardDidHide",
+      this.scrollResponderKeyboardDidHide
+    );
+
+    this._updateAnimatedNodeAttachment();
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    const prevContentInsetTop = prevProps.contentInset
+      ? prevProps.contentInset.top
+      : 0;
+    const newContentInsetTop = this.props.contentInset
+      ? this.props.contentInset.top
+      : 0;
+    if (prevContentInsetTop !== newContentInsetTop) {
+      this._scrollAnimatedValue.setOffset(newContentInsetTop || 0);
+    }
+
+    this._updateAnimatedNodeAttachment();
+  }
+
+  componentWillUnmount() {
+    if (this._subscriptionKeyboardWillShow != null) {
+      this._subscriptionKeyboardWillShow.remove();
+    }
+    if (this._subscriptionKeyboardWillHide != null) {
+      this._subscriptionKeyboardWillHide.remove();
+    }
+    if (this._subscriptionKeyboardDidShow != null) {
+      this._subscriptionKeyboardDidShow.remove();
+    }
+    if (this._subscriptionKeyboardDidHide != null) {
+      this._subscriptionKeyboardDidHide.remove();
+    }
+
+    if (this._scrollAnimatedValueAttachment) {
+      this._scrollAnimatedValueAttachment.detach();
+    }
+  }
+
+  private _setNativeRef = setAndForwardRef({
+    getForwardedRef: () => this.props.scrollViewRef,
+    setLocalRef: (ref) => {
+      this._scrollViewRef = ref;
+
+      /*
+        This is a hack. Ideally we would forwardRef to the underlying
+        host component. However, since ScrollView has it's own methods that can be
+        called as well, if we used the standard forwardRef then these
+        methods wouldn't be accessible and thus be a breaking change.
+        Therefore we edit ref to include ScrollView's public methods so that
+        they are callable from the ref.
+      */
+      if (ref) {
+        ref.getScrollResponder = this.getScrollResponder;
+        ref.getScrollableNode = this.getScrollableNode;
+        ref.getInnerViewNode = this.getInnerViewNode;
+        ref.getInnerViewRef = this.getInnerViewRef;
+        ref.getNativeScrollRef = this.getNativeScrollRef;
+        ref.scrollTo = this.scrollTo;
+        ref.scrollToEnd = this.scrollToEnd;
+        ref.flashScrollIndicators = this.flashScrollIndicators;
+        ref.scrollResponderZoomTo = this.scrollResponderZoomTo;
+        ref.scrollResponderScrollNativeHandleToKeyboard =
+          this.scrollResponderScrollNativeHandleToKeyboard;
+      }
+    },
+  });
+
+  /**
+   * Returns a reference to the underlying scroll responder, which supports
+   * operations like `scrollTo`. All ScrollView-like components should
+   * implement this method so that they can be composed while providing access
+   * to the underlying scroll responder's methods.
+   */
+  getScrollResponder: () => ScrollResponderType = () => {
+    // $FlowFixMe[unclear-type]
+    return this as any as ScrollResponderType;
+  };
+
+  getScrollableNode: () => number | null = () => {
+    return findNodeHandle(this._scrollViewRef);
+  };
+
+  getInnerViewNode: () => number | null = () => {
+    return findNodeHandle(this._innerViewRef);
+  };
+
+  getInnerViewRef: () => React.ElementRef<typeof View> | null = () => {
+    return this._innerViewRef;
+  };
+
+  getNativeScrollRef: () => React.ElementRef<HostComponent<mixed>> | null =
+    () => {
+      return this._scrollViewRef;
+    };
+
+  /**
+   * Scrolls to a given x, y offset, either immediately or with a smooth animation.
+   *
+   * Example:
+   *
+   * `scrollTo({x: 0, y: 0, animated: true})`
+   *
+   * Note: The weird function signature is due to the fact that, for historical reasons,
+   * the function also accepts separate arguments as an alternative to the options object.
+   * This is deprecated due to ambiguity (y before x), and SHOULD NOT BE USED.
+   */
+  scrollTo: (
+    options?:
+      | {
+          x?: number;
+          y?: number;
+          animated?: boolean;
+        }
+      | number,
+    deprecatedX?: number,
+    deprecatedAnimated?: boolean
+  ) => void = (
+    options?:
+      | {
+          x?: number;
+          y?: number;
+          animated?: boolean;
+        }
+      | number,
+    deprecatedX?: number,
+    deprecatedAnimated?: boolean
+  ) => {
+    let x, y, animated;
+    if (typeof options === "number") {
+      console.warn(
+        "`scrollTo(y, x, animated)` is deprecated. Use `scrollTo({x: 5, y: 5, " +
+          "animated: true})` instead."
+      );
+      y = options;
+      x = deprecatedX;
+      animated = deprecatedAnimated;
+    } else if (options) {
+      y = options.y;
+      x = options.x;
+      animated = options.animated;
+    }
+    if (this._scrollViewRef == null) {
+      return;
+    }
+    Commands.scrollTo(this._scrollViewRef, x || 0, y || 0, animated !== false);
+  };
+
   private _handleContentOnLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     this.props.onContentSizeChange &&
@@ -140,6 +319,11 @@ export default class ScrollView extends Component<Props, State> {
     } else {
       this._stickyHeaderRefs.delete(key);
     }
+  }
+
+  private _getKeyForIndex(index: number, childArray: Array<any>) {
+    const child = childArray[index];
+    return child && child.key;
   }
 
   render() {
