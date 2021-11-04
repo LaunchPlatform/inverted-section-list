@@ -17,7 +17,8 @@ const styles = StyleSheet.create({
 });
 
 export type Props = PropsWithChildren<{
-  nextHeaderLayoutY: number;
+  nextHeaderLayoutY?: number;
+  prevHeaderLayoutY?: number;
   onLayout: (event: LayoutChangeEvent) => void;
   scrollAnimatedValue: Animated.Value;
   // The height of the parent ScrollView. Currently only set when inverted.
@@ -30,8 +31,8 @@ type State = {
   measured: boolean;
   layoutY: number;
   layoutHeight: number;
-  nextHeaderLayoutY: number;
-  prevHeaderLayoutY: number | null;
+  nextHeaderLayoutY?: number;
+  prevHeaderLayoutY?: number;
   translateY: number | null;
 };
 
@@ -46,7 +47,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
     layoutY: 0,
     layoutHeight: 0,
     nextHeaderLayoutY: this.props.nextHeaderLayoutY,
-    prevHeaderLayoutY: null,
+    prevHeaderLayoutY: this.props.prevHeaderLayoutY,
     translateY: null,
   };
 
@@ -68,7 +69,7 @@ export default class ScrollViewStickyFooter extends Component<Props, State> {
     this.setState({ nextHeaderLayoutY: y });
   };
 
-  setPrevHeaderY: (y: number | null) => void = (y: number | null): void => {
+  setPrevHeaderY: (y: number) => void = (y: number): void => {
     this._shouldRecreateTranslateY = true;
     this.setState({ prevHeaderLayoutY: y });
   };

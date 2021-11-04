@@ -1,14 +1,7 @@
 import invariant from "invariant";
-import React, {
-  Component,
-  ComponentType,
-  ForwardedRef,
-  forwardRef,
-} from "react";
+import React, { Component, ComponentType } from "react";
 import {
-  LayoutChangeEvent,
   Platform,
-  ScrollView,
   ScrollViewProps,
   SectionBase,
   SectionListProps,
@@ -16,9 +9,8 @@ import {
   VirtualizedList,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
-import ScrollViewStickyFooter, {
-  Props as StickyFooterProps,
-} from "./ScrollViewStickyFooter";
+import ScrollView from "./ScrollView";
+import ScrollViewStickyFooter from "./ScrollViewStickyFooter";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
   SectionListProps<ItemT, SectionT>,
@@ -64,8 +56,6 @@ export default class InvertedSectionList<
   readonly updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
   readonly updatePropsMap: Record<string, (props: any) => void> = {};
-  readonly headerLayoutYs = new Map<string, number>();
-  readonly stickyHeaderRefs = new Map<string, ScrollViewStickyFooter | null>();
 
   private keyExtractor = (_: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -319,65 +309,14 @@ export default class InvertedSectionList<
       }
     };
 
-  private renderScrollComponent = (props: ScrollViewProps) => {
-    const { stickyHeaderIndices, ...remain } = props;
-    return (
-      <ScrollView
-        StickyHeaderComponent={forwardRef(
-          (
-            stickyFooterProps: StickyFooterProps,
-            ref: ForwardedRef<ScrollViewStickyFooter>
-          ) => {
-            const child: React.ReactNode = React.Children.only(
-              stickyFooterProps.children
-            );
-            const { index, cellKey }: { index: number; cellKey: string } = (
-              child as any
-            ).props;
-
-            const { onLayout, ...remain } = stickyFooterProps;
-            return (
-              <ScrollViewStickyFooter
-                ref={(footerRef) => {
-                  this.stickyHeaderRefs.set(cellKey, footerRef);
-                  if (typeof ref === "function") {
-                    ref(footerRef);
-                  } else if (ref !== null) {
-                    ref.current = footerRef;
-                  }
-                }}
-                onLayout={(event: LayoutChangeEvent) => {
-                  const indexOfIndex = (stickyHeaderIndices ?? []).indexOf(
-                    index
-                  );
-                  const nextIndex = (stickyHeaderIndices ?? [])[
-                    indexOfIndex + 1
-                  ];
-                  if (nextIndex !== undefined) {
-                    const info = this.subExtractor(nextIndex);
-                    const nextKey = info?.key;
-                    if (nextKey !== undefined && nextKey !== null) {
-                      const nextRef = this.stickyHeaderRefs.get(nextKey);
-                      if (nextRef !== null && nextRef !== undefined) {
-                        nextRef.setPrevHeaderY(
-                          event.nativeEvent.layout.y +
-                            event.nativeEvent.layout.height
-                        );
-                      }
-                    }
-                  }
-                  onLayout(event);
-                }}
-                {...remain}
-              />
-            );
-          }
-        )}
-        stickyHeaderIndices={stickyHeaderIndices}
-        {...remain}
-      />
-    );
-  };
+  private renderScrollComponent = (props: ScrollViewProps) => (
+    <ScrollView
+      {...{
+        StickyHeaderComponent: ScrollViewStickyFooter,
+        ...props,
+      }}
+    />
+  );
 
   render() {
     const {
