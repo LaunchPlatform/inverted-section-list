@@ -304,6 +304,37 @@ export default class ScrollView extends Component<Props, State> {
     Commands.scrollTo(this._scrollViewRef, x || 0, y || 0, animated !== false);
   };
 
+  /**
+   * If this is a vertical ScrollView scrolls to the bottom.
+   * If this is a horizontal ScrollView scrolls to the right.
+   *
+   * Use `scrollToEnd({animated: true})` for smooth animated scrolling,
+   * `scrollToEnd({animated: false})` for immediate scrolling.
+   * If no options are passed, `animated` defaults to true.
+   */
+  scrollToEnd: (options?: { animated?: boolean } | null) => void = (
+    options?: { animated?: boolean } | null
+  ) => {
+    // Default to true
+    const animated = (options && options.animated) !== false;
+    if (this._scrollViewRef == null) {
+      return;
+    }
+    Commands.scrollToEnd(this._scrollViewRef, animated);
+  };
+
+  /**
+   * Displays the scroll indicators momentarily.
+   *
+   * @platform ios
+   */
+  flashScrollIndicators: () => void = () => {
+    if (this._scrollViewRef == null) {
+      return;
+    }
+    Commands.flashScrollIndicators(this._scrollViewRef);
+  };
+
   private _handleContentOnLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     this.props.onContentSizeChange &&
