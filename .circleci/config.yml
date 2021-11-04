@@ -21,8 +21,9 @@ jobs:
           name: "Pack"
           command: |
             npm pack
+            mv inverted-section-list-*.tgz inverted-section-list.tgz
       - store_artifacts:
-          path: inverted-section-list-*.tgz
+          path: inverted-section-list.tgz
       - run:
           name: "Create npmrc"
           command: |
