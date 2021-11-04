@@ -335,6 +335,50 @@ export default class ScrollView extends Component<Props, State> {
     Commands.flashScrollIndicators(this._scrollViewRef);
   };
 
+  /**
+   * This method should be used as the callback to onFocus in a TextInputs'
+   * parent view. Note that any module using this mixin needs to return
+   * the parent view's ref in getScrollViewRef() in order to use this method.
+   * @param {number} nodeHandle The TextInput node handle
+   * @param {number} additionalOffset The scroll view's bottom "contentInset".
+   *        Default is 0.
+   * @param {bool} preventNegativeScrolling Whether to allow pulling the content
+   *        down to make it meet the keyboard's top. Default is false.
+   */
+  scrollResponderScrollNativeHandleToKeyboard: <T>(
+    nodeHandle: number | React.ElementRef<HostComponent<T>>,
+    additionalOffset?: number,
+    preventNegativeScrollOffset?: boolean
+  ) => void = (
+    nodeHandle: number | React.ElementRef<HostComponent<T>>,
+    additionalOffset?: number,
+    preventNegativeScrollOffset?: boolean
+  ) => {
+    this._additionalScrollOffset = additionalOffset || 0;
+    this._preventNegativeScrollOffset = !!preventNegativeScrollOffset;
+
+    if (this._innerViewRef == null) {
+      return;
+    }
+
+    if (typeof nodeHandle === "number") {
+      UIManager.measureLayout(
+        nodeHandle,
+        ReactNative.findNodeHandle(this),
+        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
+        this._textInputFocusError,
+        this._inputMeasureAndScrollToKeyboard
+      );
+    } else {
+      nodeHandle.measureLayout(
+        this._innerViewRef,
+        this._inputMeasureAndScrollToKeyboard,
+        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
+        this._textInputFocusError
+      );
+    }
+  };
+
   private _handleContentOnLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     this.props.onContentSizeChange &&
