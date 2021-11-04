@@ -1,9 +1,4 @@
-import React, {
-  ComponentType,
-  PropsWithChildren,
-  useEffect,
-  useState,
-} from "react";
+import React, { Component, ComponentType, ForwardedRef } from "react";
 import { View } from "react-native";
 
 interface CommonProps<ItemT, SectionT> {
@@ -17,6 +12,7 @@ interface CommonProps<ItemT, SectionT> {
 export interface Props<ItemT, SectionT> extends CommonProps<ItemT, SectionT> {
   LeadingSeparatorComponent?: ComponentType<any> | null;
   SeparatorComponent?: ComponentType<any> | null;
+  ref?: ForwardedRef<any>;
   cellKey: string;
   index: number;
   item: ItemT;
@@ -29,133 +25,138 @@ export interface Props<ItemT, SectionT> extends CommonProps<ItemT, SectionT> {
     updateFn?: ((props: CommonProps<ItemT, SectionT>) => void) | null
   ) => void;
   prevCellKey?: string;
+  onUpdateSeparator: (cellKey: string, newProps: any) => void;
   updateHighlightFor: (prevCellKey: string, value: boolean) => void;
   updatePropsFor: (prevCellKey: string, value: Record<string, any>) => void;
   renderItem: Function;
   inverted: boolean;
 }
 
-const ItemWithSeparator = <ItemT, SectionT>(
-  props: PropsWithChildren<Props<ItemT, SectionT>>
-) => {
-  const {
-    LeadingSeparatorComponent,
-    // this is the trailing separator and is associated with this item
-    SeparatorComponent,
-    cellKey,
-    prevCellKey,
-    setSelfHighlightCallback,
-    updateHighlightFor,
-    setSelfUpdatePropsCallback,
-    updatePropsFor,
-    item,
-    index,
-    section,
-    inverted,
-  } = props;
+interface State<ItemT, SectionT> {
+  separatorProps: {
+    highlighted: false;
+  } & CommonProps<ItemT, SectionT>;
+  leadingSeparatorProps: {
+    highlighted: false;
+  } & CommonProps<ItemT, SectionT>;
+}
 
-  const [leadingSeparatorHiglighted, setLeadingSeparatorHighlighted] =
-    useState(false);
+class ItemWithSeparator<ItemT, SectionT> extends Component<
+  Props<ItemT, SectionT>,
+  State<ItemT, SectionT>
+> {
+  state: State<ItemT, SectionT> = {
+    separatorProps: {
+      highlighted: false,
+      leadingItem: this.props.item,
+      leadingSection: this.props.leadingSection,
+      section: this.props.section,
+      trailingItem: this.props.trailingItem,
+      trailingSection: this.props.trailingSection,
+    },
+    leadingSeparatorProps: {
+      highlighted: false,
+      leadingItem: this.props.leadingItem,
+      leadingSection: this.props.leadingSection,
+      section: this.props.section,
+      trailingItem: this.props.item,
+      trailingSection: this.props.trailingSection,
+    },
+  };
 
-  const [separatorHighlighted, setSeparatorHighlighted] = useState(false);
-
-  const [leadingSeparatorProps, setLeadingSeparatorProps] = useState({
-    leadingItem: props.leadingItem,
-    leadingSection: props.leadingSection,
-    section: props.section,
-    trailingItem: props.item,
-    trailingSection: props.trailingSection,
-  });
-  const [separatorProps, setSeparatorProps] = useState<
-    CommonProps<ItemT, SectionT>
-  >({
-    leadingItem: props.item,
-    leadingSection: props.leadingSection,
-    section: props.section,
-    trailingItem: props.trailingItem,
-    trailingSection: props.trailingSection,
-  });
-
-  useEffect(() => {
-    setSelfHighlightCallback(cellKey, setSeparatorHighlighted);
-    setSelfUpdatePropsCallback(cellKey, setSeparatorProps);
-
-    return () => {
-      setSelfUpdatePropsCallback(cellKey, null);
-      setSelfHighlightCallback(cellKey, null);
-    };
-  }, [
-    cellKey,
-    setSelfHighlightCallback,
-    setSeparatorProps,
-    setSelfUpdatePropsCallback,
-  ]);
-
-  const separators = {
+  _separators = {
     highlight: () => {
-      setLeadingSeparatorHighlighted(true);
-      setSeparatorHighlighted(true);
-      if (prevCellKey != null) {
-        updateHighlightFor(prevCellKey, true);
-      }
+      (["leading", "trailing"] as const).forEach((s) =>
+        this._separators.updateProps(s, { highlighted: true })
+      );
     },
     unhighlight: () => {
-      setLeadingSeparatorHighlighted(false);
-      setSeparatorHighlighted(false);
-      if (prevCellKey != null) {
-        updateHighlightFor(prevCellKey, false);
-      }
+      (["leading", "trailing"] as const).forEach((s: "leading" | "trailing") =>
+        this._separators.updateProps(s, { highlighted: false })
+      );
     },
-    updateProps: (
-      select: "leading" | "trailing",
-      newProps: CommonProps<ItemT, SectionT>
-    ) => {
-      if (select === "leading") {
-        if (
-          LeadingSeparatorComponent !== null &&
-          LeadingSeparatorComponent !== undefined
-        ) {
-          setLeadingSeparatorProps({ ...leadingSeparatorProps, ...newProps });
-        } else if (prevCellKey != null) {
-          // update the previous item's separator
-          updatePropsFor(prevCellKey, {
-            ...leadingSeparatorProps,
+    updateProps: (select: "leading" | "trailing", newProps: any) => {
+      const { LeadingSeparatorComponent, cellKey, prevCellKey } = this.props;
+      if (select === "leading" && LeadingSeparatorComponent != null) {
+        this.setState((state: State<ItemT, SectionT>) => ({
+          leadingSeparatorProps: {
+            ...state.leadingSeparatorProps,
             ...newProps,
-          });
-        }
-      } else if (select === "trailing" && SeparatorComponent !== undefined) {
-        setSeparatorProps({ ...separatorProps, ...newProps });
+          },
+        }));
+      } else {
+        this.props.onUpdateSeparator(
+          (select === "leading" && prevCellKey) || cellKey,
+          newProps
+        );
       }
     },
   };
-  const element = props.renderItem({
-    item,
-    index,
-    section,
-    separators,
-  });
-  const leadingSeparator = LeadingSeparatorComponent !== null &&
-    LeadingSeparatorComponent !== undefined && (
-      <LeadingSeparatorComponent
-        highlighted={leadingSeparatorHiglighted}
-        {...leadingSeparatorProps}
-      />
+
+  static getDerivedStateFromProps(
+    props: Props<any, any>,
+    prevState: State<any, any>
+  ): State<any, any> | null {
+    return {
+      separatorProps: {
+        ...prevState.separatorProps,
+        leadingItem: props.item,
+        leadingSection: props.leadingSection,
+        section: props.section,
+        trailingItem: props.trailingItem,
+        trailingSection: props.trailingSection,
+      },
+      leadingSeparatorProps: {
+        ...prevState.leadingSeparatorProps,
+        leadingItem: props.leadingItem,
+        leadingSection: props.leadingSection,
+        section: props.section,
+        trailingItem: props.item,
+        trailingSection: props.trailingSection,
+      },
+    };
+  }
+
+  updateSeparatorProps(newProps: Object) {
+    this.setState((state: State<ItemT, SectionT>) => ({
+      separatorProps: { ...state.separatorProps, ...newProps },
+    }));
+  }
+
+  render() {
+    const {
+      LeadingSeparatorComponent,
+      SeparatorComponent,
+      item,
+      index,
+      section,
+      inverted,
+    } = this.props;
+    const element = this.props.renderItem({
+      item,
+      index,
+      section,
+      separators: this._separators,
+    });
+    const leadingSeparator = LeadingSeparatorComponent && (
+      <LeadingSeparatorComponent {...this.state.leadingSeparatorProps} />
     );
-  const separator = SeparatorComponent != null && (
-    <SeparatorComponent
-      highlighted={separatorHighlighted}
-      {...separatorProps}
-    />
-  );
-  return leadingSeparator || separator ? (
-    <View>
-      {inverted === false ? leadingSeparator : separator}
-      {element}
-      {inverted === false ? separator : leadingSeparator}
-    </View>
-  ) : (
-    element
-  );
-};
+    const separator = SeparatorComponent && (
+      <SeparatorComponent {...this.state.separatorProps} />
+    );
+    return leadingSeparator || separator ? (
+      /* $FlowFixMe(>=0.89.0 site=react_native_fb) This comment suppresses an
+       * error found when Flow v0.89 was deployed. To see the error, delete
+       * this comment and run Flow. */
+      <View>
+        {!inverted ? leadingSeparator : separator}
+        {element}
+        {!inverted ? separator : leadingSeparator}
+      </View>
+    ) : (
+      element
+    );
+  }
+}
 
 export default ItemWithSeparator;

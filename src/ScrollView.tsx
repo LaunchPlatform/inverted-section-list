@@ -4,12 +4,12 @@ import {
   Animated,
   findNodeHandle,
   HostComponent,
+  Insets,
   LayoutChangeEvent,
   Platform,
   ScrollResponderEvent,
   ScrollViewProps,
   StyleSheet,
-  Insets,
   View,
 } from "react-native";
 
@@ -50,11 +50,11 @@ const {
   default: ScrollContentViewNativeComponent,
 } = require("react-native/Libraries/Components/ScrollView/ScrollContentViewNativeComponent");
 
-let AndroidScrollView;
-let AndroidHorizontalScrollContentView;
-let AndroidHorizontalScrollView;
-let RCTScrollView;
-let RCTScrollContentView;
+let AndroidScrollView: any;
+let AndroidHorizontalScrollContentView: any;
+let AndroidHorizontalScrollView: any;
+let RCTScrollView: any;
+let RCTScrollContentView: any;
 
 if (Platform.OS === "android") {
   AndroidScrollView = ScrollViewNativeComponent;
@@ -244,7 +244,7 @@ class ScrollView extends Component<Props, State> {
 
   _setNativeRef = setAndForwardRef({
     getForwardedRef: () => this.props.scrollViewRef,
-    setLocalRef: (ref) => {
+    setLocalRef: (ref: any) => {
       this._scrollViewRef = ref;
 
       /*
@@ -501,7 +501,7 @@ class ScrollView extends Component<Props, State> {
   private _innerViewRef: React.ElementRef<typeof View> | null = null;
   private _setInnerViewRef = setAndForwardRef({
     getForwardedRef: () => this.props.innerViewRef,
-    setLocalRef: (ref) => {
+    setLocalRef: (ref: any) => {
       this._innerViewRef = ref;
     },
   });
@@ -583,10 +583,10 @@ class ScrollView extends Component<Props, State> {
             <StickyHeaderComponent
               key={key}
               nativeID={"StickyHeader-" + key} /* TODO: T68258846. */
-              ref={(ref) => this._setStickyHeaderRef(key, ref)}
+              ref={(ref: any) => this._setStickyHeaderRef(key, ref)}
               nextHeaderLayoutY={this._headerLayoutYs.get(nextKey)}
               prevHeaderLayoutY={prevHeaderLayoutY}
-              onLayout={(event) =>
+              onLayout={(event: any) =>
                 this._onStickyHeaderLayout(index, event, key)
               }
               scrollAnimatedValue={this._scrollAnimatedValue}

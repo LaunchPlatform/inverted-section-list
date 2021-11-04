@@ -9,13 +9,21 @@ import {
   VirtualizedList,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
-import ScrollView from "./ScrollView";
+import ScrollView, { ScrollResponderType } from "./ScrollView";
 import ScrollViewStickyFooter from "./ScrollViewStickyFooter";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
   SectionListProps<ItemT, SectionT>,
   "inverted" | "invertStickyHeaders" | "stickyHeaderIndices" | "getItem"
 >;
+
+export type ScrollToLocationParamsType = {
+  animated?: boolean;
+  itemIndex: number;
+  sectionIndex: number;
+  viewOffset?: number;
+  viewPosition?: number;
+};
 
 // ref: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizeUtils.js#L237-L245
 function defaultKeyExtractor(item: any, index: number): string {
@@ -56,6 +64,76 @@ export default class InvertedSectionList<
   readonly updateHighlightMap: Record<string, (hightlight: boolean) => void> =
     {};
   readonly updatePropsMap: Record<string, (props: any) => void> = {};
+
+  private readonly _cellRefs: Record<
+    string,
+    ItemWithSeparator<ItemT, SectionT>
+  > = {};
+  private _listRef?: VirtualizedList<ItemT>;
+  private _captureRef = (ref: VirtualizedList<ItemT>) => {
+    /* $FlowFixMe(>=0.53.0 site=react_native_fb,react_native_oss) This comment
+     * suppresses an error when upgrading Flow's support for React. To see the
+     * error delete this comment and run Flow. */
+    this._listRef = ref;
+  };
+
+  scrollToLocation(params: ScrollToLocationParamsType) {
+    let index = params.itemIndex;
+    for (let i = 0; i < params.sectionIndex; i++) {
+      index += this.getItemCount(this.props.sections[i]) + 2;
+    }
+    let viewOffset = params.viewOffset || 0;
+    if (params.itemIndex > 0 && this.props.stickySectionHeadersEnabled) {
+      // $FlowFixMe Cannot access private property
+      const frame = (this._listRef! as any)._getFrameMetricsApprox(
+        index - params.itemIndex
+      );
+      viewOffset += frame.length;
+    }
+    const toIndexParams = {
+      ...params,
+      viewOffset,
+      index,
+    };
+    this._listRef!.scrollToIndex(toIndexParams);
+  }
+
+  getListRef(): VirtualizedList<ItemT> | undefined {
+    return this._listRef;
+  }
+
+  /**
+   * Tells the list an interaction has occurred, which should trigger viewability calculations, e.g.
+   * if `waitForInteractions` is true and the user has not scrolled. This is typically called by
+   * taps on items or by navigation actions.
+   */
+  recordInteraction() {
+    this._listRef?.recordInteraction();
+  }
+
+  /**
+   * Displays the scroll indicators momentarily.
+   *
+   * @platform ios
+   */
+  flashScrollIndicators() {
+    (this._listRef as any)?.flashScrollIndicators();
+  }
+
+  /**
+   * Provides a handle to the underlying scroll responder.
+   */
+  getScrollResponder(): ScrollResponderType | null {
+    return (this._listRef as any)?.getScrollResponder();
+  }
+
+  getScrollableNode(): any {
+    return (this._listRef as any)?.getScrollableNode();
+  }
+
+  setNativeProps(props: Object) {
+    (this._listRef as any)?.setNativeProps(props);
+  }
 
   private keyExtractor = (_: ItemT, index: number) => {
     const info = this.subExtractor(index);
@@ -207,7 +285,7 @@ export default class InvertedSectionList<
 
   private convertViewable = (viewable: ViewToken): ViewToken => {
     invariant(viewable.index != null, "Received a broken ViewToken");
-    const info = this.subExtractor(viewable.index);
+    const info = this.subExtractor(viewable.index!);
     if (!info) {
       return null as any as ViewToken;
     }
@@ -292,7 +370,11 @@ export default class InvertedSectionList<
             item={item}
             leadingItem={info.leadingItem}
             leadingSection={info.leadingSection}
+            onUpdateSeparator={this._onUpdateSeparator}
             prevCellKey={(this.subExtractor(index - 1) || {}).key}
+            ref={(ref: ItemWithSeparator<ItemT, SectionT>) => {
+              this._cellRefs[info.key] = ref;
+            }}
             // Callback to provide updateHighlight for this item
             setSelfHighlightCallback={this.setUpdateHighlightFor}
             setSelfUpdatePropsCallback={this.setUpdatePropsFor}
@@ -309,12 +391,17 @@ export default class InvertedSectionList<
       }
     };
 
+  private _onUpdateSeparator = (key: string, newProps: any) => {
+    const ref = this._cellRefs[key];
+    ref && ref.updateSeparatorProps(newProps);
+  };
+
   private renderScrollComponent = (props: ScrollViewProps) => (
     <ScrollView
-      {...({
+      {...{
         StickyHeaderComponent: ScrollViewStickyFooter,
         ...props,
-      } as any)}
+      }}
     />
   );
 
@@ -360,6 +447,7 @@ export default class InvertedSectionList<
     return (
       <VirtualizedList
         {...passThroughProps}
+        ref={this._captureRef}
         keyExtractor={this.keyExtractor}
         renderItem={renderItem}
         renderScrollComponent={this.renderScrollComponent}
