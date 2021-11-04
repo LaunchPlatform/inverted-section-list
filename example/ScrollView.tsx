@@ -1,5 +1,10 @@
 import invariant from "invariant";
-import React, { ElementRef, Component, PropsWithChildren } from "react";
+import React, {
+  ElementRef,
+  Component,
+  Context,
+  PropsWithChildren,
+} from "react";
 import {
   Animated,
   Platform,
@@ -10,18 +15,33 @@ import {
   View,
   LayoutChangeEvent,
   findNodeHandle,
+  HostComponent,
   Keyboard,
   Dimensions,
 } from "react-native";
 
-const AndroidHorizontalScrollViewNativeComponent =
+const {
+  default: ScrollViewContext,
+  HORIZONTAL,
+  VERTICAL,
+} = require("react-native/Libraries/Components/ScrollView/ScrollViewContext");
+const ScrollResponder =
+  require("react-native/Libraries/Components/ScrollView/ScrollResponder").default;
+const {
+  default: setAndForwardRef,
+} = require("react-native/Libraries/Utilities/setAndForwardRef");
+
+const { default: AndroidHorizontalScrollViewNativeComponent } =
   require("react-native/Libraries/Components/ScrollView/AndroidHorizontalScrollViewNativeComponent").default;
-const AndroidHorizontalScrollContentViewNativeComponent =
-  require("react-native/Libraries/Components/ScrollView/AndroidHorizontalScrollContentViewNativeComponent").default;
-const ScrollViewNativeComponent =
-  require("react-native/Libraries/Components/ScrollView/ScrollViewNativeComponent").default;
-const ScrollContentViewNativeComponent =
-  require("react-native/Libraries/Components/ScrollView/ScrollContentViewNativeComponent").default;
+const {
+  default: AndroidHorizontalScrollContentViewNativeComponent,
+} = require("react-native/Libraries/Components/ScrollView/AndroidHorizontalScrollContentViewNativeComponent");
+const {
+  default: ScrollViewNativeComponent,
+} = require("react-native/Libraries/Components/ScrollView/ScrollViewNativeComponent");
+const {
+  default: ScrollContentViewNativeComponent,
+} = require("react-native/Libraries/Components/ScrollView/ScrollContentViewNativeComponent");
 
 let AndroidScrollView;
 let AndroidHorizontalScrollContentView;
@@ -93,7 +113,7 @@ export type ScrollViewStickyHeaderProps = PropsWithChildren<{
   hiddenOnScroll?: boolean;
 }>;
 
-type StickyHeaderComponentType = Component<ScrollViewStickyHeaderProps>;
+type StickyHeaderComponentType = React.Component<ScrollViewStickyHeaderProps>;
 
 const styles = StyleSheet.create({
   baseVertical: {
@@ -135,40 +155,6 @@ export default class ScrollView extends Component<Props, State> {
    */
   _scrollResponder: typeof ScrollResponder.Mixin = createScrollResponder(this);
 
-  private _scrollAnimatedValue: Animated.Value;
-  private _scrollAnimatedValueAttachment: { detach: () => void } = null;
-  private _stickyHeaderRefs: Map<
-    string,
-    React.ElementRef<StickyHeaderComponentType>
-  > = new Map();
-  private _headerLayoutYs: Map<string, number> = new Map();
-
-  _keyboardWillOpenTo: KeyboardEvent = null;
-  _additionalScrollOffset: number = 0;
-  _isTouching: boolean = false;
-  _lastMomentumScrollBeginTime: number = 0;
-  _lastMomentumScrollEndTime: number = 0;
-
-  // Reset to false every time becomes responder. This is used to:
-  // - Determine if the scroll view has been scrolled and therefore should
-  // refuse to give up its responder lock.
-  // - Determine if releasing should dismiss the keyboard when we are in
-  // tap-to-dismiss mode (this.props.keyboardShouldPersistTaps !== 'always').
-  _observedScrollSinceBecomingResponder: boolean = false;
-  _becameResponderWhileAnimating: boolean = false;
-  _preventNegativeScrollOffset: boolean | null = null;
-
-  _animated = null;
-
-  _subscriptionKeyboardWillShow: EventSubscription | null = null;
-  _subscriptionKeyboardWillHide: EventSubscription | null = null;
-  _subscriptionKeyboardDidShow: EventSubscription | null = null;
-  _subscriptionKeyboardDidHide: EventSubscription | null = null;
-
-  state: State = {
-    layoutHeight: null,
-  };
-
   constructor(props: Props) {
     super(props);
 
@@ -207,11 +193,13 @@ export default class ScrollView extends Component<Props, State> {
       });
   }
 
-  _scrollAnimatedValue: Animated.Value = new Animated.Value(0);
-  _scrollAnimatedValueAttachment: { detach: () => void } | null = null;
-  _stickyHeaderRefs: Map<string, React.ElementRef<StickyHeaderComponentType>> =
-    new Map();
-  _headerLayoutYs: Map<string, number> = new Map();
+  private _scrollAnimatedValue: Animated.Value = new Animated.Value(0);
+  private _scrollAnimatedValueAttachment: { detach: () => void } | null = null;
+  private _stickyHeaderRefs: Map<
+    string,
+    React.ElementRef<StickyHeaderComponentType>
+  > = new Map();
+  private _headerLayoutYs: Map<string, number> = new Map();
 
   state: State = {
     layoutHeight: null,
@@ -220,7 +208,7 @@ export default class ScrollView extends Component<Props, State> {
 
   UNSAFE_componentWillMount() {
     this._scrollResponder.UNSAFE_componentWillMount();
-    this._scrollAnimatedValue = new AnimatedImplementation.Value(
+    this._scrollAnimatedValue = new Animated.Value(
       this.props.contentOffset?.y ?? 0
     );
     this._scrollAnimatedValue.setOffset(this.props.contentInset?.top ?? 0);
