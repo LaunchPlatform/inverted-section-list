@@ -21,6 +21,7 @@ const {
 const {
   Mixin: ScrollResponderMixin,
 } = require("react-native/Libraries/Components/ScrollResponder");
+const ScrollViewStickyHeader = require("react-native/Libraries/Components/ScrollView/ScrollViewStickyHeader");
 const {
   default: processDecelerationRate,
 } = require("react-native/Libraries/Components/ScrollView/processDecelerationRate");
@@ -432,8 +433,8 @@ class ScrollView extends Component<Props, State> {
         this._getKeyForIndex(previousHeaderIndex, childArray)
       );
       previousHeader &&
-        previousHeader.setNextHeaderY &&
-        previousHeader.setNextHeaderY(layoutY);
+        (previousHeader as any).setNextHeaderY &&
+        (previousHeader as any).setNextHeaderY(layoutY);
     }
   }
 
