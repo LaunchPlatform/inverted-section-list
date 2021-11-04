@@ -1,23 +1,17 @@
 import invariant from "invariant";
-import React, {
-  ElementRef,
-  Component,
-  Context,
-  PropsWithChildren,
-} from "react";
+import React, { Component, PropsWithChildren, RefObject } from "react";
 import {
   Animated,
+  findNodeHandle,
+  flattenStyle,
+  HostComponent,
+  LayoutChangeEvent,
   Platform,
+  ScrollResponderEvent,
   ScrollViewProps,
   StyleSheet,
-  flattenStyle,
-  EventSubscription,
+  Insets,
   View,
-  LayoutChangeEvent,
-  findNodeHandle,
-  HostComponent,
-  Keyboard,
-  Dimensions,
 } from "react-native";
 
 const {
@@ -28,8 +22,26 @@ const {
 const ScrollResponder =
   require("react-native/Libraries/Components/ScrollView/ScrollResponder").default;
 const {
+  default: processDecelerationRate,
+} = require("react-native/Libraries/Components/ScrollView/processDecelerationRate");
+const {
   default: setAndForwardRef,
 } = require("react-native/Libraries/Utilities/setAndForwardRef");
+const {
+  default: dismissKeyboard,
+} = require("react-native/Libraries/Utilities/dismissKeyboard");
+const {
+  default: splitLayoutProps,
+} = require("react-native/Libraries/Utilities/splitLayoutProps");
+const {
+  default: flattenStyle,
+} = require("react-native/Libraries/StyleSheet/flattenStyle");
+const {
+  default: resolveAssetSource,
+} = require("react-native/Libraries/Image/resolveAssetSource");
+const {
+  attachNativeEvent,
+} = require("react-native/Libraries/Animated/AnimatedEvent");
 
 const { default: AndroidHorizontalScrollViewNativeComponent } =
   require("react-native/Libraries/Components/ScrollView/AndroidHorizontalScrollViewNativeComponent").default;
@@ -61,32 +73,27 @@ if (Platform.OS === "android") {
 
 // Public methods for ScrollView
 export interface ScrollViewImperativeMethods {
-  getScrollResponder: $PropertyType<ScrollView, "getScrollResponder">;
-  getScrollableNode: $PropertyType<ScrollView, "getScrollableNode">;
-  getInnerViewNode: $PropertyType<ScrollView, "getInnerViewNode">;
-  getInnerViewRef: $PropertyType<ScrollView, "getInnerViewRef">;
-  getNativeScrollRef: $PropertyType<ScrollView, "getNativeScrollRef">;
-  scrollTo: $PropertyType<ScrollView, "scrollTo">;
-  scrollToEnd: $PropertyType<ScrollView, "scrollToEnd">;
-  flashScrollIndicators: $PropertyType<ScrollView, "flashScrollIndicators">;
-
-  // ScrollResponder.Mixin public methods
-  scrollResponderZoomTo: $PropertyType<
-    typeof ScrollResponder.Mixin,
-    "scrollResponderZoomTo"
-  >;
-  scrollResponderScrollNativeHandleToKeyboard: $PropertyType<
-    typeof ScrollResponder.Mixin,
-    "scrollResponderScrollNativeHandleToKeyboard"
-  >;
+  // TODO:
 }
 
 export type ScrollResponderType = ScrollViewImperativeMethods;
 
-export type Props = ScrollViewProps;
+export type Props = ScrollViewProps & {
+  scrollViewRef?: RefObject<any>;
+  innerViewRef?: RefObject<any>;
+  contentOffset?: { x: number; y: number };
+  contentInset?: Insets;
+  scrollBarThumbImage?: string;
+  StickyHeaderComponent?: Component<ScrollViewStickyHeaderProps>;
+};
 
 type State = {
   layoutHeight: number | null;
+  isTouching: boolean;
+  lastMomentumScrollBeginTime: number;
+  lastMomentumScrollEndTime: number;
+  observedScrollSinceBecomingResponder: boolean;
+  becameResponderWhileAnimating: boolean;
 };
 
 function createScrollResponder(
@@ -138,7 +145,7 @@ const styles = StyleSheet.create({
 // By Facebook
 // MIT License: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/LICENSE
 // We only changes the things needed to be done to make inverted section list sticky header works
-export default class ScrollView extends Component<Props, State> {
+class ScrollView extends Component<Props, State> {
   static Context: typeof ScrollViewContext = ScrollViewContext;
 
   /**
@@ -195,10 +202,7 @@ export default class ScrollView extends Component<Props, State> {
 
   private _scrollAnimatedValue: Animated.Value = new Animated.Value(0);
   private _scrollAnimatedValueAttachment: { detach: () => void } | null = null;
-  private _stickyHeaderRefs: Map<
-    string,
-    React.ElementRef<StickyHeaderComponentType>
-  > = new Map();
+  private _stickyHeaderRefs: Map<string, React.ElementRef<any>> = new Map();
   private _headerLayoutYs: Map<string, number> = new Map();
 
   state: State = {
@@ -267,10 +271,11 @@ export default class ScrollView extends Component<Props, State> {
         ref.flashScrollIndicators = this.flashScrollIndicators;
 
         // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
-        ref.scrollResponderZoomTo = this.scrollResponderZoomTo;
+        ref.scrollResponderZoomTo = (this as any).scrollResponderZoomTo;
         // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
-        ref.scrollResponderScrollNativeHandleToKeyboard =
-          this.scrollResponderScrollNativeHandleToKeyboard;
+        ref.scrollResponderScrollNativeHandleToKeyboard = (
+          this as any
+        ).scrollResponderScrollNativeHandleToKeyboard;
       }
     },
   });
@@ -298,7 +303,7 @@ export default class ScrollView extends Component<Props, State> {
     return this._innerViewRef;
   };
 
-  getNativeScrollRef: () => React.ElementRef<HostComponent<mixed>> | null =
+  getNativeScrollRef: () => React.ElementRef<HostComponent<any>> | null =
     () => {
       return this._scrollViewRef;
     };
@@ -396,7 +401,7 @@ export default class ScrollView extends Component<Props, State> {
       this.props.stickyHeaderIndices &&
       this.props.stickyHeaderIndices.length > 0
     ) {
-      this._scrollAnimatedValueAttachment = Animated.attachNativeEvent(
+      this._scrollAnimatedValueAttachment = attachNativeEvent(
         this._scrollViewRef,
         "onScroll",
         [{ nativeEvent: { contentOffset: { y: this._scrollAnimatedValue } } }]
@@ -404,10 +409,7 @@ export default class ScrollView extends Component<Props, State> {
     }
   }
 
-  private _setStickyHeaderRef(
-    key: string,
-    ref: React.ElementRef<StickyHeaderComponentType> | null
-  ) {
+  private _setStickyHeaderRef(key: string, ref: React.ElementRef<any> | null) {
     if (ref) {
       this._stickyHeaderRefs.set(key, ref);
     } else {
@@ -441,7 +443,7 @@ export default class ScrollView extends Component<Props, State> {
     }
   }
 
-  private _handleScroll = (e: ScrollEvent) => {
+  private _handleScroll = (e: ScrollResponderEvent) => {
     if (__DEV__) {
       if (
         this.props.onScroll &&
@@ -483,17 +485,17 @@ export default class ScrollView extends Component<Props, State> {
       this.props.onContentSizeChange(width, height);
   };
 
-  _scrollViewRef: React.ElementRef<HostComponent<mixed>> | null = null;
+  private _scrollViewRef: React.ElementRef<HostComponent<any>> | null = null;
 
-  _innerViewRef: React.ElementRef<typeof View> | null = null;
-  _setInnerViewRef = setAndForwardRef({
+  private _innerViewRef: React.ElementRef<typeof View> | null = null;
+  private _setInnerViewRef = setAndForwardRef({
     getForwardedRef: () => this.props.innerViewRef,
     setLocalRef: (ref) => {
       this._innerViewRef = ref;
     },
   });
 
-  render(): React.Node | React.Element<string> {
+  render() {
     let ScrollViewClass;
     let ScrollContentContainerViewClass;
     if (Platform.OS === "android") {
@@ -552,7 +554,7 @@ export default class ScrollView extends Component<Props, State> {
       children = childArray.map((child, index) => {
         const indexOfIndex = child ? stickyHeaderIndices.indexOf(index) : -1;
         if (indexOfIndex > -1) {
-          const key = child.key;
+          const key = (child as any).key;
           const nextIndex = stickyHeaderIndices[indexOfIndex + 1];
           const StickyHeaderComponent =
             this.props.StickyHeaderComponent || ScrollViewStickyHeader;
@@ -734,3 +736,15 @@ export default class ScrollView extends Component<Props, State> {
     );
   }
 }
+
+function Wrapper(props: ScrollViewProps, ref: any) {
+  return <ScrollView {...props} scrollViewRef={ref} />;
+}
+Wrapper.displayName = "ScrollView";
+const ForwardedScrollView = React.forwardRef(Wrapper);
+
+// $FlowFixMe Add static context to ForwardedScrollView
+(ForwardedScrollView as any).Context = ScrollViewContext;
+ForwardedScrollView.displayName = "ScrollView";
+
+export default ForwardedScrollView;
