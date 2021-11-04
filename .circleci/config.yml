@@ -18,6 +18,12 @@ jobs:
           command: |
             yarn build
       - run:
+          name: "Pack"
+          command: |
+            npm pack
+      - store_artifacts:
+          path: inverted-section-list-*.tgz
+      - run:
           name: "Create npmrc"
           command: |
             echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
