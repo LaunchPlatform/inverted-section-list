@@ -11,6 +11,7 @@ import {
   LayoutChangeEvent,
   findNodeHandle,
   Keyboard,
+  Dimensions,
 } from "react-native";
 
 const AndroidHorizontalScrollViewNativeComponent =
@@ -22,11 +23,65 @@ const ScrollViewNativeComponent =
 const ScrollContentViewNativeComponent =
   require("react-native/Libraries/Components/ScrollView/ScrollContentViewNativeComponent").default;
 
+let AndroidScrollView;
+let AndroidHorizontalScrollContentView;
+let AndroidHorizontalScrollView;
+let RCTScrollView;
+let RCTScrollContentView;
+
+if (Platform.OS === "android") {
+  AndroidScrollView = ScrollViewNativeComponent;
+  AndroidHorizontalScrollView = AndroidHorizontalScrollViewNativeComponent;
+  AndroidHorizontalScrollContentView =
+    AndroidHorizontalScrollContentViewNativeComponent;
+} else {
+  RCTScrollView = ScrollViewNativeComponent;
+  RCTScrollContentView = ScrollContentViewNativeComponent;
+}
+
+// Public methods for ScrollView
+export interface ScrollViewImperativeMethods {
+  getScrollResponder: $PropertyType<ScrollView, "getScrollResponder">;
+  getScrollableNode: $PropertyType<ScrollView, "getScrollableNode">;
+  getInnerViewNode: $PropertyType<ScrollView, "getInnerViewNode">;
+  getInnerViewRef: $PropertyType<ScrollView, "getInnerViewRef">;
+  getNativeScrollRef: $PropertyType<ScrollView, "getNativeScrollRef">;
+  scrollTo: $PropertyType<ScrollView, "scrollTo">;
+  scrollToEnd: $PropertyType<ScrollView, "scrollToEnd">;
+  flashScrollIndicators: $PropertyType<ScrollView, "flashScrollIndicators">;
+
+  // ScrollResponder.Mixin public methods
+  scrollResponderZoomTo: $PropertyType<
+    typeof ScrollResponder.Mixin,
+    "scrollResponderZoomTo"
+  >;
+  scrollResponderScrollNativeHandleToKeyboard: $PropertyType<
+    typeof ScrollResponder.Mixin,
+    "scrollResponderScrollNativeHandleToKeyboard"
+  >;
+}
+
+export type ScrollResponderType = ScrollViewImperativeMethods;
+
 export type Props = ScrollViewProps;
 
 type State = {
   layoutHeight: number | null;
 };
+
+function createScrollResponder(
+  node: React.ElementRef<typeof ScrollView>
+): typeof ScrollResponder.Mixin {
+  const scrollResponder = { ...ScrollResponder.Mixin };
+
+  for (const key in scrollResponder) {
+    if (typeof scrollResponder[key] === "function") {
+      scrollResponder[key] = scrollResponder[key].bind(node);
+    }
+  }
+
+  return scrollResponder;
+}
 
 export type ScrollViewStickyHeaderProps = PropsWithChildren<{
   nextHeaderLayoutY: number;
@@ -58,32 +113,28 @@ const styles = StyleSheet.create({
   },
 });
 
-const { NativeHorizontalScrollViewTuple, NativeVerticalScrollViewTuple } =
-  Platform.OS === "android"
-    ? {
-        NativeHorizontalScrollViewTuple: [
-          AndroidHorizontalScrollViewNativeComponent,
-          AndroidHorizontalScrollContentViewNativeComponent,
-        ],
-        NativeVerticalScrollViewTuple: [ScrollViewNativeComponent, View],
-      }
-    : {
-        NativeHorizontalScrollViewTuple: [
-          ScrollViewNativeComponent,
-          ScrollContentViewNativeComponent,
-        ],
-        NativeVerticalScrollViewTuple: [
-          ScrollViewNativeComponent,
-          ScrollContentViewNativeComponent,
-        ],
-      };
-
 // Mostly copied from
-// https://github.com/facebook/react-native/blob/86491749ee67562e424209f644f7273061633687/Libraries/Components/ScrollView/ScrollView.js
+// https://github.com/facebook/react-native/blob/757bb75fbf837714725d7b2af62149e8e2a7ee51/Libraries/Components/ScrollView/ScrollView.js
 // By Facebook
 // MIT License: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/LICENSE
 // We only changes the things needed to be done to make inverted section list sticky header works
 export default class ScrollView extends Component<Props, State> {
+  static Context: typeof ScrollViewContext = ScrollViewContext;
+
+  /**
+   * Part 1: Removing ScrollResponder.Mixin:
+   *
+   * 1. Mixin methods should be flow typed. That's why we create a
+   *    copy of ScrollResponder.Mixin and attach it to this._scrollResponder.
+   *    Otherwise, we'd have to manually declare each method on the component
+   *    class and assign it a flow type.
+   * 2. Mixin methods can call component methods, and access the component's
+   *    props and state. So, we need to bind all mixin methods to the
+   *    component instance.
+   * 3. Continued...
+   */
+  _scrollResponder: typeof ScrollResponder.Mixin = createScrollResponder(this);
+
   private _scrollAnimatedValue: Animated.Value;
   private _scrollAnimatedValueAttachment: { detach: () => void } = null;
   private _stickyHeaderRefs: Map<
@@ -121,81 +172,90 @@ export default class ScrollView extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
 
-    this._scrollAnimatedValue = new Animated.Value(
+    /**
+     * Part 2: Removing ScrollResponder.Mixin
+     *
+     * 3. Mixin methods access other mixin methods via dynamic dispatch using
+     *    this. Since mixin methods are bound to the component instance, we need
+     *    to copy all mixin methods to the component instance. This is also
+     *    necessary because getScrollResponder() is a public method that returns
+     *    an object that can be used to execute all scrollResponder methods.
+     *    Since the object returned from that method is the ScrollView instance,
+     *    we need to bind all mixin methods to the ScrollView instance.
+     */
+    for (const key in ScrollResponder.Mixin) {
+      if (
+        typeof ScrollResponder.Mixin[key] === "function" &&
+        key.startsWith("scrollResponder")
+      ) {
+        // $FlowFixMe - dynamically adding properties to a class
+        (this as any)[key] = ScrollResponder.Mixin[key].bind(this);
+      }
+    }
+
+    /**
+     * Part 3: Removing ScrollResponder.Mixin
+     *
+     * 4. Mixins can initialize properties and use properties on the component
+     *    instance.
+     */
+    Object.keys(ScrollResponder.Mixin)
+      .filter((key) => typeof ScrollResponder.Mixin[key] !== "function")
+      .forEach((key) => {
+        // $FlowFixMe - dynamically adding properties to a class
+        (this as any)[key] = ScrollResponder.Mixin[key];
+      });
+  }
+
+  _scrollAnimatedValue: Animated.Value = new Animated.Value(0);
+  _scrollAnimatedValueAttachment: { detach: () => void } | null = null;
+  _stickyHeaderRefs: Map<string, React.ElementRef<StickyHeaderComponentType>> =
+    new Map();
+  _headerLayoutYs: Map<string, number> = new Map();
+
+  state: State = {
+    layoutHeight: null,
+    ...ScrollResponder.Mixin.scrollResponderMixinGetInitialState(),
+  };
+
+  UNSAFE_componentWillMount() {
+    this._scrollResponder.UNSAFE_componentWillMount();
+    this._scrollAnimatedValue = new AnimatedImplementation.Value(
       this.props.contentOffset?.y ?? 0
     );
     this._scrollAnimatedValue.setOffset(this.props.contentInset?.top ?? 0);
+    this._stickyHeaderRefs = new Map();
+    this._headerLayoutYs = new Map();
+  }
+
+  UNSAFE_componentWillReceiveProps(nextProps: Props) {
+    const currentContentInsetTop = this.props.contentInset
+      ? this.props.contentInset.top
+      : 0;
+    const nextContentInsetTop = nextProps.contentInset
+      ? nextProps.contentInset.top
+      : 0;
+    if (currentContentInsetTop !== nextContentInsetTop) {
+      this._scrollAnimatedValue.setOffset(nextContentInsetTop || 0);
+    }
   }
 
   componentDidMount() {
-    if (typeof this.props.keyboardShouldPersistTaps === "boolean") {
-      console.warn(
-        `'keyboardShouldPersistTaps={${
-          this.props.keyboardShouldPersistTaps === true ? "true" : "false"
-        }}' is deprecated. ` +
-          `Use 'keyboardShouldPersistTaps="${
-            this.props.keyboardShouldPersistTaps ? "always" : "never"
-          }"' instead`
-      );
-    }
-
-    this._keyboardWillOpenTo = null;
-    this._additionalScrollOffset = 0;
-
-    this._subscriptionKeyboardWillShow = Keyboard.addListener(
-      "keyboardWillShow",
-      this.scrollResponderKeyboardWillShow
-    );
-    this._subscriptionKeyboardWillHide = Keyboard.addListener(
-      "keyboardWillHide",
-      this.scrollResponderKeyboardWillHide
-    );
-    this._subscriptionKeyboardDidShow = Keyboard.addListener(
-      "keyboardDidShow",
-      this.scrollResponderKeyboardDidShow
-    );
-    this._subscriptionKeyboardDidHide = Keyboard.addListener(
-      "keyboardDidHide",
-      this.scrollResponderKeyboardDidHide
-    );
-
     this._updateAnimatedNodeAttachment();
   }
 
-  componentDidUpdate(prevProps: Props) {
-    const prevContentInsetTop = prevProps.contentInset
-      ? prevProps.contentInset.top
-      : 0;
-    const newContentInsetTop = this.props.contentInset
-      ? this.props.contentInset.top
-      : 0;
-    if (prevContentInsetTop !== newContentInsetTop) {
-      this._scrollAnimatedValue.setOffset(newContentInsetTop || 0);
-    }
-
+  componentDidUpdate() {
     this._updateAnimatedNodeAttachment();
   }
 
   componentWillUnmount() {
-    if (this._subscriptionKeyboardWillShow != null) {
-      this._subscriptionKeyboardWillShow.remove();
-    }
-    if (this._subscriptionKeyboardWillHide != null) {
-      this._subscriptionKeyboardWillHide.remove();
-    }
-    if (this._subscriptionKeyboardDidShow != null) {
-      this._subscriptionKeyboardDidShow.remove();
-    }
-    if (this._subscriptionKeyboardDidHide != null) {
-      this._subscriptionKeyboardDidHide.remove();
-    }
-
+    this._scrollResponder.componentWillUnmount();
     if (this._scrollAnimatedValueAttachment) {
       this._scrollAnimatedValueAttachment.detach();
     }
   }
 
-  private _setNativeRef = setAndForwardRef({
+  _setNativeRef = setAndForwardRef({
     getForwardedRef: () => this.props.scrollViewRef,
     setLocalRef: (ref) => {
       this._scrollViewRef = ref;
@@ -217,7 +277,10 @@ export default class ScrollView extends Component<Props, State> {
         ref.scrollTo = this.scrollTo;
         ref.scrollToEnd = this.scrollToEnd;
         ref.flashScrollIndicators = this.flashScrollIndicators;
+
+        // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
         ref.scrollResponderZoomTo = this.scrollResponderZoomTo;
+        // $FlowFixMe - This method was manually bound from ScrollResponder.mixin
         ref.scrollResponderScrollNativeHandleToKeyboard =
           this.scrollResponderScrollNativeHandleToKeyboard;
       }
@@ -298,10 +361,11 @@ export default class ScrollView extends Component<Props, State> {
       x = options.x;
       animated = options.animated;
     }
-    if (this._scrollViewRef == null) {
-      return;
-    }
-    Commands.scrollTo(this._scrollViewRef, x || 0, y || 0, animated !== false);
+    this._scrollResponder.scrollResponderScrollTo({
+      x: x || 0,
+      y: y || 0,
+      animated: animated !== false,
+    });
   };
 
   /**
@@ -317,10 +381,9 @@ export default class ScrollView extends Component<Props, State> {
   ) => {
     // Default to true
     const animated = (options && options.animated) !== false;
-    if (this._scrollViewRef == null) {
-      return;
-    }
-    Commands.scrollToEnd(this._scrollViewRef, animated);
+    this._scrollResponder.scrollResponderScrollToEnd({
+      animated: animated,
+    });
   };
 
   /**
@@ -329,53 +392,100 @@ export default class ScrollView extends Component<Props, State> {
    * @platform ios
    */
   flashScrollIndicators: () => void = () => {
-    if (this._scrollViewRef == null) {
-      return;
-    }
-    Commands.flashScrollIndicators(this._scrollViewRef);
+    this._scrollResponder.scrollResponderFlashScrollIndicators();
   };
 
-  /**
-   * This method should be used as the callback to onFocus in a TextInputs'
-   * parent view. Note that any module using this mixin needs to return
-   * the parent view's ref in getScrollViewRef() in order to use this method.
-   * @param {number} nodeHandle The TextInput node handle
-   * @param {number} additionalOffset The scroll view's bottom "contentInset".
-   *        Default is 0.
-   * @param {bool} preventNegativeScrolling Whether to allow pulling the content
-   *        down to make it meet the keyboard's top. Default is false.
-   */
-  scrollResponderScrollNativeHandleToKeyboard: <T>(
-    nodeHandle: number | React.ElementRef<HostComponent<T>>,
-    additionalOffset?: number,
-    preventNegativeScrollOffset?: boolean
-  ) => void = (
-    nodeHandle: number | React.ElementRef<HostComponent<T>>,
-    additionalOffset?: number,
-    preventNegativeScrollOffset?: boolean
-  ) => {
-    this._additionalScrollOffset = additionalOffset || 0;
-    this._preventNegativeScrollOffset = !!preventNegativeScrollOffset;
+  private _getKeyForIndex(index: number, childArray: Array<any>) {
+    const child = childArray[index];
+    return child && child.key;
+  }
 
-    if (this._innerViewRef == null) {
+  private _updateAnimatedNodeAttachment() {
+    if (this._scrollAnimatedValueAttachment) {
+      this._scrollAnimatedValueAttachment.detach();
+    }
+    if (
+      this.props.stickyHeaderIndices &&
+      this.props.stickyHeaderIndices.length > 0
+    ) {
+      this._scrollAnimatedValueAttachment = Animated.attachNativeEvent(
+        this._scrollViewRef,
+        "onScroll",
+        [{ nativeEvent: { contentOffset: { y: this._scrollAnimatedValue } } }]
+      );
+    }
+  }
+
+  private _setStickyHeaderRef(
+    key: string,
+    ref: React.ElementRef<StickyHeaderComponentType> | null
+  ) {
+    if (ref) {
+      this._stickyHeaderRefs.set(key, ref);
+    } else {
+      this._stickyHeaderRefs.delete(key);
+    }
+  }
+
+  private _onStickyHeaderLayout(index, event, key) {
+    const { stickyHeaderIndices } = this.props;
+    if (!stickyHeaderIndices) {
+      return;
+    }
+    const childArray = React.Children.toArray(this.props.children);
+    if (key !== this._getKeyForIndex(index, childArray)) {
+      // ignore stale layout update
       return;
     }
 
-    if (typeof nodeHandle === "number") {
-      UIManager.measureLayout(
-        nodeHandle,
-        ReactNative.findNodeHandle(this),
-        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        this._textInputFocusError,
-        this._inputMeasureAndScrollToKeyboard
+    const layoutY = event.nativeEvent.layout.y;
+    this._headerLayoutYs.set(key, layoutY);
+
+    const indexOfIndex = stickyHeaderIndices.indexOf(index);
+    const previousHeaderIndex = stickyHeaderIndices[indexOfIndex - 1];
+    if (previousHeaderIndex != null) {
+      const previousHeader = this._stickyHeaderRefs.get(
+        this._getKeyForIndex(previousHeaderIndex, childArray)
       );
-    } else {
-      nodeHandle.measureLayout(
-        this._innerViewRef,
-        this._inputMeasureAndScrollToKeyboard,
-        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        this._textInputFocusError
-      );
+      previousHeader &&
+        previousHeader.setNextHeaderY &&
+        previousHeader.setNextHeaderY(layoutY);
+    }
+  }
+
+  private _handleScroll = (e: ScrollEvent) => {
+    if (__DEV__) {
+      if (
+        this.props.onScroll &&
+        this.props.scrollEventThrottle == null &&
+        Platform.OS === "ios"
+      ) {
+        console.log(
+          "You specified `onScroll` on a <ScrollView> but not " +
+            "`scrollEventThrottle`. You will only receive one event. " +
+            "Using `16` you get all the events but be aware that it may " +
+            "cause frame drops, use a bigger number if you don't need as " +
+            "much precision."
+        );
+      }
+    }
+    if (Platform.OS === "android") {
+      if (
+        this.props.keyboardDismissMode === "on-drag" &&
+        this.state.isTouching
+      ) {
+        dismissKeyboard();
+      }
+    }
+    this._scrollResponder.scrollResponderHandleScroll(e);
+  };
+
+  private _handleLayout = (e: LayoutChangeEvent) => {
+    if (this.props.invertStickyHeaders === true) {
+      this.setState({ layoutHeight: e.nativeEvent.layout.height });
+    }
+    if (this.props.onLayout) {
+      this.props.onLayout(e);
     }
   };
 
@@ -385,27 +495,41 @@ export default class ScrollView extends Component<Props, State> {
       this.props.onContentSizeChange(width, height);
   };
 
-  private _setStickyHeaderRef(
-    key: string,
-    ref: React.ElementRef<StickyHeaderComponentType>
-  ) {
-    if (ref) {
-      this._stickyHeaderRefs.set(key, ref);
+  _scrollViewRef: React.ElementRef<HostComponent<mixed>> | null = null;
+
+  _innerViewRef: React.ElementRef<typeof View> | null = null;
+  _setInnerViewRef = setAndForwardRef({
+    getForwardedRef: () => this.props.innerViewRef,
+    setLocalRef: (ref) => {
+      this._innerViewRef = ref;
+    },
+  });
+
+  render(): React.Node | React.Element<string> {
+    let ScrollViewClass;
+    let ScrollContentContainerViewClass;
+    if (Platform.OS === "android") {
+      if (this.props.horizontal === true) {
+        ScrollViewClass = AndroidHorizontalScrollView;
+        ScrollContentContainerViewClass = AndroidHorizontalScrollContentView;
+      } else {
+        ScrollViewClass = AndroidScrollView;
+        ScrollContentContainerViewClass = View;
+      }
     } else {
-      this._stickyHeaderRefs.delete(key);
+      ScrollViewClass = RCTScrollView;
+      ScrollContentContainerViewClass = RCTScrollContentView;
     }
-  }
 
-  private _getKeyForIndex(index: number, childArray: Array<any>) {
-    const child = childArray[index];
-    return child && child.key;
-  }
+    invariant(
+      ScrollViewClass !== undefined,
+      "ScrollViewClass must not be undefined"
+    );
 
-  render() {
-    const [NativeDirectionalScrollView, NativeDirectionalScrollContentView] =
-      this.props.horizontal === true
-        ? NativeHorizontalScrollViewTuple
-        : NativeVerticalScrollViewTuple;
+    invariant(
+      ScrollContentContainerViewClass !== undefined,
+      "ScrollContentContainerViewClass must not be undefined"
+    );
 
     const contentContainerStyle = [
       this.props.horizontal === true && styles.contentContainerHorizontal,
@@ -424,12 +548,12 @@ export default class ScrollView extends Component<Props, State> {
       );
     }
 
-    const contentSizeChangeProps =
-      this.props.onContentSizeChange == null
-        ? null
-        : {
-            onLayout: this._handleContentOnLayout,
-          };
+    let contentSizeChangeProps = {};
+    if (this.props.onContentSizeChange) {
+      contentSizeChangeProps = {
+        onLayout: this._handleContentOnLayout,
+      };
+    }
 
     const { stickyHeaderIndices } = this.props;
     let children = this.props.children;
@@ -440,7 +564,7 @@ export default class ScrollView extends Component<Props, State> {
       children = childArray.map((child, index) => {
         const indexOfIndex = child ? stickyHeaderIndices.indexOf(index) : -1;
         if (indexOfIndex > -1) {
-          const key = (child as any).key;
+          const key = child.key;
           const nextIndex = stickyHeaderIndices[indexOfIndex + 1];
           const StickyHeaderComponent =
             this.props.StickyHeaderComponent || ScrollViewStickyHeader;
@@ -457,7 +581,6 @@ export default class ScrollView extends Component<Props, State> {
               }
               scrollAnimatedValue={this._scrollAnimatedValue}
               inverted={this.props.invertStickyHeaders}
-              hiddenOnScroll={this.props.stickyHeaderHiddenOnScroll}
               scrollViewHeight={this.state.layoutHeight}
             >
               {child}
@@ -480,7 +603,10 @@ export default class ScrollView extends Component<Props, State> {
       Array.isArray(stickyHeaderIndices) && stickyHeaderIndices.length > 0;
 
     const contentContainer = (
-      <NativeDirectionalScrollContentView
+      /* $FlowFixMe(>=0.112.0 site=react_native_fb) This comment suppresses an
+       * error found when Flow v0.112 was deployed. To see the error, delete
+       * this comment and run Flow. */
+      <ScrollContentContainerViewClass
         {...contentSizeChangeProps}
         ref={this._setInnerViewRef}
         style={contentContainerStyle}
@@ -494,7 +620,7 @@ export default class ScrollView extends Component<Props, State> {
         collapsable={false}
       >
         {children}
-      </NativeDirectionalScrollContentView>
+      </ScrollContentContainerViewClass>
     );
 
     const alwaysBounceHorizontal =
@@ -515,28 +641,39 @@ export default class ScrollView extends Component<Props, State> {
       ...this.props,
       alwaysBounceHorizontal,
       alwaysBounceVertical,
-      style: StyleSheet.compose(baseStyle, this.props.style),
+      style: [baseStyle, this.props.style],
       // Override the onContentSizeChange from props, since this event can
       // bubble up from TextInputs
       onContentSizeChange: null,
       onLayout: this._handleLayout,
-      onMomentumScrollBegin: this._handleMomentumScrollBegin,
-      onMomentumScrollEnd: this._handleMomentumScrollEnd,
-      onResponderGrant: this._handleResponderGrant,
-      onResponderReject: this._handleResponderReject,
-      onResponderRelease: this._handleResponderRelease,
-      onResponderTerminationRequest: this._handleResponderTerminationRequest,
-      onScrollBeginDrag: this._handleScrollBeginDrag,
-      onScrollEndDrag: this._handleScrollEndDrag,
-      onScrollShouldSetResponder: this._handleScrollShouldSetResponder,
-      onStartShouldSetResponder: this._handleStartShouldSetResponder,
+      onMomentumScrollBegin:
+        this._scrollResponder.scrollResponderHandleMomentumScrollBegin,
+      onMomentumScrollEnd:
+        this._scrollResponder.scrollResponderHandleMomentumScrollEnd,
+      onResponderGrant:
+        this._scrollResponder.scrollResponderHandleResponderGrant,
+      onResponderReject:
+        this._scrollResponder.scrollResponderHandleResponderReject,
+      onResponderRelease:
+        this._scrollResponder.scrollResponderHandleResponderRelease,
+      onResponderTerminationRequest:
+        this._scrollResponder.scrollResponderHandleTerminationRequest,
+      onScrollBeginDrag:
+        this._scrollResponder.scrollResponderHandleScrollBeginDrag,
+      onScrollEndDrag: this._scrollResponder.scrollResponderHandleScrollEndDrag,
+      onScrollShouldSetResponder:
+        this._scrollResponder.scrollResponderHandleScrollShouldSetResponder,
+      onStartShouldSetResponder:
+        this._scrollResponder.scrollResponderHandleStartShouldSetResponder,
       onStartShouldSetResponderCapture:
-        this._handleStartShouldSetResponderCapture,
-      onTouchEnd: this._handleTouchEnd,
-      onTouchMove: this._handleTouchMove,
-      onTouchStart: this._handleTouchStart,
-      onTouchCancel: this._handleTouchCancel,
+        this._scrollResponder
+          .scrollResponderHandleStartShouldSetResponderCapture,
+      onTouchEnd: this._scrollResponder.scrollResponderHandleTouchEnd,
+      onTouchMove: this._scrollResponder.scrollResponderHandleTouchMove,
+      onTouchStart: this._scrollResponder.scrollResponderHandleTouchStart,
+      onTouchCancel: this._scrollResponder.scrollResponderHandleTouchCancel,
       onScroll: this._handleScroll,
+      scrollBarThumbImage: resolveAssetSource(this.props.scrollBarThumbImage),
       scrollEventThrottle: hasStickyHeaders
         ? 1
         : this.props.scrollEventThrottle,
@@ -574,10 +711,13 @@ export default class ScrollView extends Component<Props, State> {
       if (Platform.OS === "ios") {
         // On iOS the RefreshControl is a child of the ScrollView.
         return (
-          <NativeDirectionalScrollView {...props} ref={this._setNativeRef}>
+          /* $FlowFixMe(>=0.117.0 site=react_native_fb) This comment suppresses
+           * an error found when Flow v0.117 was deployed. To see the error,
+           * delete this comment and run Flow. */
+          <ScrollViewClass {...props} ref={this._setNativeRef}>
             {refreshControl}
             {contentContainer}
-          </NativeDirectionalScrollView>
+          </ScrollViewClass>
         );
       } else if (Platform.OS === "android") {
         // On Android wrap the ScrollView with a AndroidSwipeRefreshLayout.
@@ -588,21 +728,21 @@ export default class ScrollView extends Component<Props, State> {
         const { outer, inner } = splitLayoutProps(flattenStyle(props.style));
         return React.cloneElement(
           refreshControl,
-          { style: StyleSheet.compose(baseStyle, outer) },
-          <NativeDirectionalScrollView
+          { style: [baseStyle, outer] },
+          <ScrollViewClass
             {...props}
-            style={StyleSheet.compose(baseStyle, inner)}
+            style={[baseStyle, inner]}
             ref={this._setNativeRef}
           >
             {contentContainer}
-          </NativeDirectionalScrollView>
+          </ScrollViewClass>
         );
       }
     }
     return (
-      <NativeDirectionalScrollView {...props} ref={this._setNativeRef}>
+      <ScrollViewClass {...props} ref={this._setNativeRef}>
         {contentContainer}
-      </NativeDirectionalScrollView>
+      </ScrollViewClass>
     );
   }
 }
