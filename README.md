@@ -36,3 +36,10 @@ code from React Native 0.64 for following components:
 - [ScrollViewStickyFooter](https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Components/ScrollView/ScrollViewStickyHeader.js)
 - [VirtualizedSectionList](https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js)
 
+Since we are using TypeScript here, so the original source code are converted into TypeScript.
+There are following key changes were made from the original source code.
+
+### ScrollView
+
+https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L572-L574
+
