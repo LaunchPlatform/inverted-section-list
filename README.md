@@ -41,5 +41,35 @@ There are following key changes were made from the original source code.
 
 ### ScrollView
 
-https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L572-L574
+For the `StickyHeaderComponent` component, we don't just pass in `nextHeaderLayoutY`, since now the order is inverted, we need to
+also pass in `prevHeaderLayoutY` for the next sticky header to calculate the correct position of begin and end.
+Such as, the sticky header layout update callback needs to set prev header value [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L446-L454):
 
+```typescript
+private _onStickyHeaderLayout(
+  index: number,
+  event: LayoutChangeEvent,
+  key: string
+) {
+  /* ... */
+  const nextHeaderIndex = stickyHeaderIndices[indexOfIndex + 1];
+  if (nextHeaderIndex != null) {
+    const nextHeader = this._stickyHeaderRefs.get(
+      this._getKeyForIndex(nextHeaderIndex, childArray)
+    );
+    nextHeader &&
+      (nextHeader as any).setPrevHeaderY &&
+      (nextHeader as any).setPrevHeaderY(layoutY + height);
+  }
+}
+```
+
+And extra `prevLayoutY` props value needs to be calculated [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L572-L574):
+
+```typescript
+const prevKey = this._getKeyForIndex(prevIndex, childArray);
+const prevLayoutY = this._headerLayoutYs.get(prevKey);
+const prevLayoutHeight = this._headerLayoutHeights.get(prevKey);
+```
+
+Then passed into the `StickyHeaderComponent` [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L588)
