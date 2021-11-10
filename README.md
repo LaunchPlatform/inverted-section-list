@@ -64,12 +64,19 @@ private _onStickyHeaderLayout(
 }
 ```
 
-And extra `prevLayoutY` props value needs to be calculated [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L572-L574):
+And extra `prevLayoutY` props value needs to be calculated [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L572-L578):
 
 ```typescript
 const prevKey = this._getKeyForIndex(prevIndex, childArray);
 const prevLayoutY = this._headerLayoutYs.get(prevKey);
 const prevLayoutHeight = this._headerLayoutHeights.get(prevKey);
+let prevHeaderLayoutY: number | undefined = undefined;
+if (prevLayoutY != null && prevLayoutHeight != null) {
+  prevHeaderLayoutY = prevLayoutY + prevLayoutHeight;
+}
 ```
 
 Then passed into the `StickyHeaderComponent` [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L588)
+
+### StickyHeaderComponent
+
