@@ -41,6 +41,11 @@ interface State<ItemT, SectionT> {
   } & CommonProps<ItemT, SectionT>;
 }
 
+// Mostly copied from
+// https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js
+// By Facebook
+// MIT License: https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/LICENSE
+// We only changes the things needed to be done to make inverted section list sticky header works
 class ItemWithSeparator<ItemT, SectionT> extends Component<
   Props<ItemT, SectionT>,
   State<ItemT, SectionT>
