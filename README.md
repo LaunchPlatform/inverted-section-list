@@ -98,7 +98,9 @@ There was issue open for years but no sign of the problem been fixed. At Launch 
 we are building a app product [Monoline](https://monoline.io), and its message list needs to present in inverted direction
 with working sticky header:
 
-![Monoline demo](assets/monoline-demo.gif?raw=true)
+<p align="center">
+  ![Monoline demo](assets/monoline-demo.gif?raw=true)
+</p>
 
 We have no choice but to find a way to fix this problem. Forking React Native is too much effort for us
 to maintain. We have plan to open Pull Requests to upstream React Native repository, but we anticipate those
