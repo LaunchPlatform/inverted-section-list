@@ -80,3 +80,37 @@ Then passed into the `StickyHeaderComponent` [here](https://github.com/LaunchPla
 
 ### StickyHeaderComponent
 
+The `StickyHeaderComponent` source code is copied and renamed as `StickyFooterComponent`, because to make
+sticky "header" works, we pass the header component as footer instead. New method `setPrevHeaderY` is
+added [here](https://github.com/LaunchPlatform/inverted-section-list/blob/ceb0d30fbb50552f3037fb76d78fd46e37536da6/src/ScrollViewStickyFooter.tsx#L72-L75)
+to receivew the previous header's position from `ScrollView`.
+
+The another major change [here](https://github.com/LaunchPlatform/inverted-section-list/blob/ceb0d30fbb50552f3037fb76d78fd46e37536da6/src/ScrollViewStickyFooter.tsx#L210-L231)
+is implementing the correct position calculation logic with the preview header y position provided from
+our own `ScrollView`:
+
+```typescript
+// The interpolate looks like this:
+//
+// ------
+//       \
+//        \            height = delta
+//         \---------
+//  prev^   ^current
+//        ^ width = delta
+//
+// Basically, it starts from `prevStickEndPoint`, where the
+// previous header stops scrolling. Then we starts the sticking by adding
+// negative delta to the `translateY` to cancel the scrolling offset.
+// Until the point, where we have scroll to where the current header's original
+// position, at this point the `translateY` goes down to 0 so that it
+// will scroll with the content
+inputRange = [
+  prevStickEndPoint - 1,
+  prevStickEndPoint,
+  stickStartPoint,
+  stickStartPoint + 1,
+];
+outputRange = [-delta, -delta, 0, 0];
+```
+
