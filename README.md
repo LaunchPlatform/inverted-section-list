@@ -94,8 +94,8 @@ yarn add inverted-section-list
 # Why?
 
 The sticky header of inverted SectionList component of React Native is not working as expected.
-There was issue open for years but no sign of the problem been fixed. At Launch Platform,
-we are building a app product [Monoline](https://monoline.io), and its message list needs to present in inverted direction
+There was an issue [#18945](https://github.com/facebook/react-native/issues/18945) open for years but no sign of the problem been fixed.
+At Launch Platform, we are building a app product [Monoline](https://monoline.io), and its message list needs to present in inverted direction
 with working sticky header:
 
 <p align="center">
