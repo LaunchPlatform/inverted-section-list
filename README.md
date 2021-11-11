@@ -78,7 +78,7 @@ if (prevLayoutY != null && prevLayoutHeight != null) {
 
 Then passed into the `StickyHeaderComponent` [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L588)
 
-### StickyHeaderComponent
+### StickyFooterComponent
 
 The `StickyHeaderComponent` source code is copied and renamed as `StickyFooterComponent`, because to make
 sticky "header" works, we pass the header component as footer instead. New method `setPrevHeaderY` is
@@ -114,3 +114,22 @@ inputRange = [
 outputRange = [-delta, -delta, 0, 0];
 ```
 
+### InvertedSectionList
+
+We copied and combined the
+[VirtualizedSectionList](https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js) and
+[SectionList](https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/SectionList.js)
+components into `InvertedSectionList`.
+
+The major change [here](https://github.com/LaunchPlatform/inverted-section-list/blob/69a44003500281d6b89166c59c407c5b9fa1050d/src/InvertedSectionList.tsx#L433-L438) is
+that we are passing the footer indices as `stickyHeaderIndices` instead to the `VirtualizedList` since we are using
+footer instead of header:
+
+```typescript
+// Notice: this is different from the original VirtualizedSectionList,
+//         since we are actually using footer as the header here, so need to + 1
+//         for the header
+stickyHeaderIndices.push(
+  itemCount + listHeaderOffset + sectionItemCount + 1
+);
+```
