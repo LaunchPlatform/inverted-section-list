@@ -99,7 +99,7 @@ we are building a app product [Monoline](https://monoline.io), and its message l
 with working sticky header:
 
 <p align="center">
-  ![Monoline demo](assets/monoline-demo.gif?raw=true)
+  <img src="assets/monoline-demo.gif?raw=true" alt="Monoline demo screencast" />
 </p>
 
 We have no choice but to find a way to fix this problem. Forking React Native is too much effort for us
