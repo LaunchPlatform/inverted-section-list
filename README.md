@@ -83,7 +83,15 @@ yarn install --dev
 yarn start
 ```
 
-## Why?
+# Install
+
+Run
+
+```bash
+yarn add inverted-section-list
+```
+
+# Why?
 
 The sticky header of inverted SectionList component of React Native is not working as expected.
 There was issue open for years but no sign of the problem been fixed. At Launch Platform,
@@ -97,7 +105,7 @@ to maintain. We have plan to open Pull Requests to upstream React Native reposit
 will take long time before they got reviewed and merged. To solve the problem before it's fixed in the upstream,
 we build a standalone `InvertedSectionList` component.
 
-## How?
+# How?
 
 There are different places where the logic needed to be changed in order for the inverted sticky header to work.
 But those logic are deeply baked inside the build-in component's source code and there's no easy way to change them
@@ -111,7 +119,7 @@ code from React Native 0.64 for following components:
 Since we are using TypeScript here, so the original source code are converted into TypeScript.
 There are following key changes were made from the original source code.
 
-### ScrollView
+## ScrollView
 
 For the `StickyHeaderComponent` component, we don't just pass in `nextHeaderLayoutY`, since now the order is inverted, we need to
 also pass in `prevHeaderLayoutY` for the next sticky header to calculate the correct position of begin and end.
@@ -150,7 +158,7 @@ if (prevLayoutY != null && prevLayoutHeight != null) {
 
 Then passed into the `StickyHeaderComponent` [here](https://github.com/LaunchPlatform/inverted-section-list/blob/db04f829993f0e1c6f6ba261fb459f8264080466/src/ScrollView.tsx#L588)
 
-### StickyFooterComponent
+## StickyFooterComponent
 
 The `StickyHeaderComponent` source code is copied and renamed as `StickyFooterComponent`, because to make
 sticky "header" works, we pass the header component as footer instead. New method `setPrevHeaderY` is
@@ -186,7 +194,7 @@ inputRange = [
 outputRange = [-delta, -delta, 0, 0];
 ```
 
-### InvertedSectionList
+## InvertedSectionList
 
 We copied and combined the
 [VirtualizedSectionList](https://github.com/facebook/react-native/blob/6790cf137f73f2d7863911f9115317048c66a6ee/Libraries/Lists/VirtualizedSectionList.js) and
