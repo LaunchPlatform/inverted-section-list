@@ -107,6 +107,8 @@ to maintain. We have plan to open Pull Requests to upstream React Native reposit
 will take long time before they got reviewed and merged. To solve the problem before it's fixed in the upstream,
 we build a standalone `InvertedSectionList` component.
 
+We thought others in the community could benefit from this, so we open sourced it here.
+
 # How?
 
 There are different places where the logic needed to be changed in order for the inverted sticky header to work.
