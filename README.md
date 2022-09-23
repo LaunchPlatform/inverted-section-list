@@ -1,6 +1,10 @@
 # InvertedSectionList
 A React Native component that implements SectionList with inverted direction and working sticky header
 
+# Supported React Native version
+
+Currently we support 66 or above, however, new changes introduce in the future might break it at somepoint.
+
 # Demo
 
 ```typescript
