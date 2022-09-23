@@ -54,12 +54,8 @@ const {
 const {
   default: ScrollViewCommands,
 } = require("react-native/Libraries/Components/ScrollView/ScrollViewCommands");
-const {
-  default: FrameRateLogger,
-} = require("react-native/Libraries/Interaction/FrameRateLogger");
-const {
-  default: TextInputState,
-} = require("react-native/Libraries/TextInput/TextInputState");
+const TextInputState = require("react-native/Libraries/Components/TextInput/TextInputState");
+const FrameRateLogger = require("react-native/Libraries/Interaction/FrameRateLogger");
 
 interface PressEvent {
   readonly target: any;
