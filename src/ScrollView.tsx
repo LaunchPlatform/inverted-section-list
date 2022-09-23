@@ -89,18 +89,22 @@ export interface ScrollViewImperativeMethods {
 
 export type ScrollResponderType = ScrollViewImperativeMethods;
 
-export type Props = ScrollViewProps & {
-  scrollViewRef?: RefObject<any>;
-  innerViewRef?: RefObject<any>;
-  contentOffset?: { x: number; y: number };
-  contentInset?: Insets;
-  scrollBarThumbImage?: string;
-  StickyHeaderComponent?: Component<ScrollViewStickyHeaderProps>;
-  onKeyboardWillShow: (event: KeyboardEvent) => void;
-  onKeyboardWillHide: (event: KeyboardEvent) => void;
-  onKeyboardDidShow: (event: KeyboardEvent) => void;
-  onKeyboardDidHide: (event: KeyboardEvent) => void;
-};
+export interface IOSkeyBoardEventProps {
+  onKeyboardWillShow?: (event: KeyboardEvent) => void;
+  onKeyboardWillHide?: (event: KeyboardEvent) => void;
+  onKeyboardDidShow?: (event: KeyboardEvent) => void;
+  onKeyboardDidHide?: (event: KeyboardEvent) => void;
+}
+
+export type Props = ScrollViewProps &
+  IOSkeyBoardEventProps & {
+    scrollViewRef?: RefObject<any>;
+    innerViewRef?: RefObject<any>;
+    contentOffset?: { x: number; y: number };
+    contentInset?: Insets;
+    scrollBarThumbImage?: string;
+    StickyHeaderComponent?: Component<ScrollViewStickyHeaderProps>;
+  };
 
 type State = {
   layoutHeight: number | null;
@@ -242,6 +246,7 @@ class ScrollView extends Component<Props, State> {
   private _becameResponderWhileAnimating: boolean = false;
   private _preventNegativeScrollOffset: boolean | null = null;
 
+  // @ts-ignore
   private _animated: boolean | null = null;
 
   private _subscriptionKeyboardWillShow: EventSubscription | null = null;
@@ -586,7 +591,7 @@ class ScrollView extends Component<Props, State> {
     top: number,
     width: number,
     height: number
-  ) => void = (left: number, top: number, width: number, height: number) => {
+  ) => void = (_left: number, top: number, _width: number, height: number) => {
     let keyboardScreenY = Dimensions.get("window").height;
     if (this._keyboardWillOpenTo != null) {
       keyboardScreenY = this._keyboardWillOpenTo.endCoordinates.screenY;

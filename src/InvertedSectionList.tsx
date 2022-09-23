@@ -9,7 +9,10 @@ import {
   VirtualizedList,
 } from "react-native";
 import ItemWithSeparator from "./ItemWithSeparator";
-import ScrollView, { ScrollResponderType } from "./ScrollView";
+import ScrollView, {
+  ScrollResponderType,
+  IOSkeyBoardEventProps,
+} from "./ScrollView";
 import ScrollViewStickyFooter from "./ScrollViewStickyFooter";
 
 export type Props<ItemT, SectionT extends SectionBase<ItemT, SectionT>> = Omit<
@@ -396,7 +399,9 @@ export default class InvertedSectionList<
     ref && ref.updateSeparatorProps(newProps);
   };
 
-  private renderScrollComponent = (props: ScrollViewProps) => (
+  private renderScrollComponent = (
+    props: ScrollViewProps & IOSkeyBoardEventProps
+  ) => (
     <ScrollView
       {...{
         StickyHeaderComponent: ScrollViewStickyFooter as any,
